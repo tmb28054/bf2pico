@@ -22,9 +22,14 @@ import requests
 import diskcache
 
 
+LOG = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(message)s",
+    stream=sys.stdout
+)
 CACHE = diskcache.Cache('~/.bf2pico')
 CACHE_TIME = int(os.getenv('BF2PICO_CACHE', '60')) # 1 min
-LOG = logging.getLogger(__name__)
 
 
 DRAINTIME = 8
