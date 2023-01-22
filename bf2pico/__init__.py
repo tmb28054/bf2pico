@@ -12,10 +12,13 @@
 """
 
 
+from datetime import datetime
 import base64
 import json
 import logging
 import os
+import random
+import string
 import sys
 
 
@@ -31,6 +34,7 @@ logging.basicConfig(
 )
 CACHE = diskcache.Cache('~/.bf2pico')
 CACHE_TIME = int(os.getenv('BF2PICO_CACHE', '60')) # 1 min
+DB_CACHE_TIME = 60 * 60 * 24 * 365 * 10 # 10 years
 
 
 DRAINTIME = 8
@@ -52,6 +56,52 @@ PICO_LOCATIONS = {
     'Adjunct4': 5,
     'Pause': 6,
 }
+
+
+DEFAULT_SESSION_DATA = {
+    'ZSeriesID': 460,
+    'ProfileID': 14392,
+    'LastLogID': None,
+    'RecipeID': None,
+    'StillUID': None,
+    'StillVer': None,
+    'GroupSession': False,
+    'RecipeGuid': None,
+    'ClosingDate': None,
+    'Deleted': False,
+    'Notes': None,
+    'Lat': 32.811131,
+    'Lng': -117.251457,
+    'CityLat': 32.715736,
+    'CityLng': -117.161087,
+    'Active': True,
+    'Pressure': 0,
+    'MaxTempAddedSec': 0,
+    'ProgramParams': {
+        'Duration': 0.0,
+        'Water': 0.0,
+        'Intensity': 0.0,
+        'Temperature': 0.0,
+        'Abv': None,
+        'Ibu': None
+    },
+    'SessionLogs': [],
+    'SecondsRemaining': None
+}
+
+
+def _gid() -> str:
+    """ I generate a 32 char random alphanumeric string
+    """
+    return \
+        str(
+            ''.join(
+                random.choices(
+                    string.ascii_letters + string.digits,
+                    k=32
+                )
+            )
+        ).upper()
 
 
 def celsius2fahrenheit(celsius: int) -> int:
@@ -265,6 +315,67 @@ def get_batchs(auth) -> dict:
     return result
 
 
+def _new_session_id(user_id) -> int:
+    """ I return a session id that is unique based on the userid.
+    """
+    counter = 104185
+    while f'{user_id}-{counter}' in CACHE:
+        counter += 1
+    return counter
+
+class BrewLog:
+    """
+        I manage the session of a brew event.
+    """
+    def __init__(self, **kwargs) -> object:
+        """
+            tdb
+        """
+        self.logger = logging.getLogger(__name__)
+        self.logger.debug('Creating RecipeDB')
+
+        self.userid = kwargs.get(
+            'userid',
+            os.getenv('BREWFATHER_USERID', None)
+        )
+        self._id = kwargs.get(
+            '_id',
+            _new_session_id(self.userid)
+        )
+        self.index = f'{self.userid}-{self._id}'
+
+        self.data = {
+            'ID': self._id,
+            'GUID': _gid(),
+            'CreationDate': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3]
+        }
+
+        # populate from request
+        for key, value in kwargs.get('data', {}).items():
+            if key not in self.data:
+                self.data[key] = value
+
+        # populate from defaults
+        for key, value in DEFAULT_SESSION_DATA.items():
+            if key not in self.data:
+                self.data[key] = value
+
+
+    # def load(self, _id) -> None:
+    #     """ tbd
+    #     """
+    #     index = f'{self.userid}-{_id}'
+    #     self.recipe_list = CACHE[self.userid]
+
+    def save(self) -> None:
+        """ tbd
+        """
+        CACHE.set(
+            self.userid,
+            self.data,
+            expire=DB_CACHE_TIME
+        )
+
 class RecipeDB:
     """_summary_
 
@@ -300,7 +411,7 @@ class RecipeDB:
         CACHE.set(
             self.userid,
             self.recipe_list,
-            expire=CACHE_TIME
+            expire=DB_CACHE_TIME
         )
 
     def add_recipe(self, recipe) -> None:
@@ -308,6 +419,21 @@ class RecipeDB:
         """
         self.recipe_list[self.counter] = recipe
         self.counter += 1
+
+    def fetch_recipe(self, _id: int):
+        """_summary_
+
+        Args:
+            _id (_type_): _description_
+        """
+        return self.recipe_list.get(
+            int(_id),
+            {
+                'error': f'recipe for id {_id} not found',
+                'recipes': self.recipe_list
+
+            }
+        )
 
     def list_recipes(self) -> None:
         """ tbd
@@ -333,7 +459,6 @@ class RecipeDB:
                 'TotalResults': len(recipes),
                 'Recipes':  recipes
             }
-
 
 
 class BrewFather:  # pylint: disable=R0903
@@ -424,3 +549,13 @@ class BrewFather:  # pylint: disable=R0903
                 )
         recipe_session.save()
         return recipe_session.list_recipes()
+
+    def get_recipe(self, _id) -> dict:
+        """
+            I rerturn a recipe
+        """
+        recipe_session = RecipeDB(
+            userid=self.userid
+        )
+        recipe_session.load()
+        return recipe_session.fetch_recipe(_id)
