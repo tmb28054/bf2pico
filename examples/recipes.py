@@ -61,7 +61,7 @@ def _main() -> None:
     )
     print(
         json.dumps(
-            recipe.pico(),
+            recipe.start_session(),
             indent=2
         )
     )

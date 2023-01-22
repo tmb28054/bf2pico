@@ -16,6 +16,7 @@ import base64
 import json
 import logging
 import os
+import sys
 
 
 import requests
@@ -33,6 +34,24 @@ CACHE_TIME = int(os.getenv('BF2PICO_CACHE', '60')) # 1 min
 
 
 DRAINTIME = 8
+
+
+RECIPE_NAME_BY_ID = {}
+RECIPE_ID_BY_NAME = {}
+RECIPE_BY_ID = {}
+
+RECIPE_COUNTER = 170335
+
+PICO_LOCATIONS = {
+    'PassThru': 0,
+    'Whirlpool': 0,
+    'Mash': 1,
+    'Adjunct1': 2,
+    'Adjunct2': 3,
+    'Adjunct3': 4,
+    'Adjunct4': 5,
+    'Pause': 6,
+}
 
 
 def celsius2fahrenheit(celsius: int) -> int:
@@ -64,35 +83,35 @@ def _gen_pico(recipe: dict) -> dict:
     for step in recipe['mash']['steps']:
         steps += [
             { # Raise the water temp
-                'drain_time': 0,
-                'hop_time': '',
-                'location': 'PassThru',
-                'name': 'Heat Mash',
-                'step_time': 0,
-                'temperature': 152,
-                'total_time': 0
+                'Drain':  0,
+                # 'hop_time': '',
+                'Location': PICO_LOCATIONS.get('PassThru', 0),
+                'Name': 'Heat Mash',
+                'Time': 0,
+                'Temp': celsius2fahrenheit(step['stepTemp']),
+                # 'total_time': 0
             },
             { # Convert carbs to sugar
-                'drain_time': DRAINTIME,
-                'hop_time': '',
-                'location': 'Mash',
-                'name': 'Mash',
-                'step_time': step['stepTime'],
-                'temperature': celsius2fahrenheit(step['stepTemp']),
-                'total_time': step['stepTime'] + DRAINTIME
+                'Drain':  DRAINTIME,
+                # 'hop_time': '',
+                'Location': PICO_LOCATIONS.get('Mash', 0),
+                'Name': 'Mash',
+                'Time': step['stepTime'],
+                'Temp': celsius2fahrenheit(step['stepTemp']),
+                # 'total_time': step['stepTime'] + DRAINTIME
             },
         ]
 
     # add a step to heat to a boil
     steps += [
         {
-            'drain_time': 0,
-            'hop_time': '',
-            'location': 'PassThru',
-            'name': 'Heat to Boil',
-            'step_time': 0,
-            'temperature': 207,
-            'total_time': 0
+            'Drain':  0,
+            # 'hop_time': '',
+            'Location': PICO_LOCATIONS.get('PassThru', 0),
+            'Name': 'Heat to Boil',
+            'Time': 0,
+            'Temp': 207,
+            # 'total_time': 0
         },
     ]
 
@@ -125,26 +144,26 @@ def _gen_pico(recipe: dict) -> dict:
         if slot == 1 and step_time:
             steps += [
                 {
-                    'drain_time': 0,
-                    'hop_time': '',
-                    'location': 'PassThru',
-                    'name': 'Pre-hop Boil',
-                    'step_time': step_time,
-                    'temperature': 207,
-                    'total_time': step_time
+                    'Drain':  0,
+                    # 'hop_time': '',
+                    'Location': PICO_LOCATIONS.get('PassThru', 0),
+                    'Name': 'Pre-hop Boil',
+                    'Time': step_time,
+                    'Temp': 207,
+                    # 'total_time': step_time
                 }
             ]
 
         # add the hops
         steps += [
             {
-                'drain_time': 0,
-                'hop_time': index,
-                'location': f'Adjunct{slot}',
-                'name': f'Hops {slot}',
-                'step_time': index,
-                'temperature': 207,
-                'total_time': index
+                'Drain':  0,
+                # 'hop_time': index,
+                'Location': PICO_LOCATIONS.get(f'Adjunct{slot}', 0),
+                'Name': f'Hops {slot}',
+                'Time': index,
+                'Temp': 207,
+                # 'total_time': index
             },
         ]
 
@@ -154,29 +173,31 @@ def _gen_pico(recipe: dict) -> dict:
     if whirlpool:
         steps += [
             {
-                'drain_time': 0,
-                'hop_time': '',
-                'location': 'PassThru',
-                'name': 'Cool to Whirlpool',
-                'step_time': 0,
-                'temperature': 175,
-                'total_time': 0
+                'Drain':  0,
+                # 'hop_time': '',
+                'Location': PICO_LOCATIONS.get('PassThru', 0),
+                'Name': 'Cool to Whirlpool',
+                'Time': 0,
+                'Temp': 175,
+                # 'total_time': 0
             },
             {
-                'drain_time': 5,
-                'hop_time': whirlpool,
-                'location': f'Adjunct{slot}',
-                'name': 'Whirlpool',
-                'step_time': whirlpool,
-                'temperature': 175,
-                'total_time': whirlpool + 5
+                'Drain':  5,
+                # 'hop_time': whirlpool,
+                'Location': PICO_LOCATIONS.get(f'Adjunct{slot}', 0),
+                'Name': 'Whirlpool',
+                'Time': whirlpool,
+                'Temp': 175,
+                # 'total_time': whirlpool + 5
             },
         ]
 
     pico = {
-        'id': recipe['_id'],
-        'name': recipe['name'],
-        'steps': steps
+        'ID': recipe['_id'],
+        'Name': recipe['name'],
+        'StartWater': 16.69,
+        'TypeCode': 'Beer',
+        'Steps': steps
     }
     return pico
 
@@ -192,7 +213,7 @@ def get_recipes(auth) -> dict:
                     and the value being the brewfather recipe.
     """
     if 'recipes' in CACHE:
-        return CACHE['recipes']
+        return CACHE[f'{auth}recipes']
     recipes = {}
     url = 'https://api.brewfather.app/v1/recipes?limit=50&complete=True'
     response = requests.get(
@@ -214,9 +235,10 @@ def get_recipes(auth) -> dict:
         loop_count += 1
         response = requests.get(f'{url}&offset={loop_count * 50}')
 
-    CACHE.set('recipes', recipes, expire=CACHE_TIME)
+    CACHE.set(f'{auth}recipes', recipes, expire=CACHE_TIME)
 
     return recipes
+
 
 def get_batchs(auth) -> dict:
     """
@@ -229,7 +251,7 @@ def get_batchs(auth) -> dict:
                     in brewfather
     """
     if 'batchs' in CACHE:
-        return CACHE['batchs']
+        return CACHE[f'{auth}batchs']
 
     response = requests.get(
         'https://api.brewfather.app/v1/batches?limit=50&status=Brewing',
@@ -239,8 +261,80 @@ def get_batchs(auth) -> dict:
         }
     )
     result = json.loads(response.text)
-    CACHE.set('batchs', result, expire=CACHE_TIME)
+    CACHE.set(f'{auth}batchs', result, expire=CACHE_TIME)
     return result
+
+
+class RecipeDB:
+    """_summary_
+
+    Raises:
+        Exception: _description_
+        Exception: _description_
+
+    Returns:
+        _type_: _description_
+    """
+    def __init__(self, **kwargs) -> object:
+        """
+            tdb
+        """
+        self.logger = logging.getLogger(__name__)
+        self.logger.debug('Creating RecipeDB')
+
+        self.userid = kwargs.get(
+            'userid',
+            os.getenv('BREWFATHER_USERID', None)
+        )
+        self.counter = 170335
+        self.recipe_list = {}
+
+    def load(self) -> None:
+        """ tbd
+        """
+        self.recipe_list = CACHE[self.userid]
+
+    def save(self) -> None:
+        """ tbd
+        """
+        CACHE.set(
+            self.userid,
+            self.recipe_list,
+            expire=CACHE_TIME
+        )
+
+    def add_recipe(self, recipe) -> None:
+        """ tbd
+        """
+        self.recipe_list[self.counter] = recipe
+        self.counter += 1
+
+    def list_recipes(self) -> None:
+        """ tbd
+        """
+        recipes = []
+        for _id, recipe in self.recipe_list.items():
+            recipes.append(
+                {
+                    'ID': _id,
+                    'Name': recipe['Name'],
+                    'Kind': 0,
+                    'Uri': None,
+                    'Abv': -1,
+                    'Ibu': -1
+                }
+            )
+        return \
+            {
+                'Kind': 1,
+                'Offset': 0,
+                'SearchString': None,
+                'MaxCount': 0,
+                'TotalResults': len(recipes),
+                'Recipes':  recipes
+            }
+
+
 
 class BrewFather:  # pylint: disable=R0903
     """
@@ -307,3 +401,26 @@ class BrewFather:  # pylint: disable=R0903
                 )
                 batch_list.append(name)
         return result
+
+    def start_session(self) -> dict:
+        """
+            I return a list of batchs dedup'ing multiple batchs with of the
+            same recipe.
+
+            Returns: list of dict where each dict is a option for the pico.
+        """
+        recipe_session = RecipeDB(
+            userid=self.userid
+        )
+        batch_list = []
+
+        recipes = get_recipes(self.auth)
+        LOG.debug(json.dumps(recipes, indent=2))
+        for batch in get_batchs(self.auth):
+            name = batch['recipe']['name']
+            if name not in batch_list:
+                recipe_session.add_recipe(
+                    recipe=_gen_pico(recipes[name])
+                )
+        recipe_session.save()
+        return recipe_session.list_recipes()
