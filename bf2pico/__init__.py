@@ -323,6 +323,39 @@ def _new_session_id(user_id) -> int:
         counter += 1
     return counter
 
+
+def _new_log_event_id(user_id) -> int:
+    """ new log event id
+    """
+    counter = 21204557
+    while f'{user_id}-event-{counter}' in CACHE:
+        counter += 1
+    CACHE.set(f'{user_id}-event-{counter}', True, expire=DB_CACHE_TIME)
+    return counter
+
+
+def new_session_data(_id, kwargs) -> dict:
+    """ tbd
+    """
+    data = {
+        'ID': _id,
+        'GUID': _gid(),
+        'CreationDate': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3]
+    }
+
+    # populate from request
+    for key, value in kwargs.get('data', {}).items():
+        if key not in data:
+            data[key] = value
+
+    # populate from defaults
+    for key, value in DEFAULT_SESSION_DATA.items():
+        if key not in data:
+            data[key] = value
+
+    return data
+
+
 class BrewLog:
     """
         I manage the session of a brew event.
@@ -338,43 +371,59 @@ class BrewLog:
             'userid',
             os.getenv('BREWFATHER_USERID', None)
         )
-        self._id = kwargs.get(
-            '_id',
-            _new_session_id(self.userid)
-        )
+
+        if kwargs.get('_id', None):
+            self._id = kwargs.get('_id')
+            self.data = CACHE.get(
+                f'{self.userid}-{self._id}',
+                new_session_data(self._id, kwargs)
+            )
+        else:
+            self._id = _new_session_id(self.userid)
+            self.data = new_session_data(self._id, kwargs)
+
         self.index = f'{self.userid}-{self._id}'
-
-        self.data = {
-            'ID': self._id,
-            'GUID': _gid(),
-            'CreationDate': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3]
-        }
-
-        # populate from request
-        for key, value in kwargs.get('data', {}).items():
-            if key not in self.data:
-                self.data[key] = value
-
-        # populate from defaults
-        for key, value in DEFAULT_SESSION_DATA.items():
-            if key not in self.data:
-                self.data[key] = value
-
-
-    # def load(self, _id) -> None:
-    #     """ tbd
-    #     """
-    #     index = f'{self.userid}-{_id}'
-    #     self.recipe_list = CACHE[self.userid]
 
     def save(self) -> None:
         """ tbd
         """
         CACHE.set(
-            self.userid,
+            self.index,
             self.data,
             expire=DB_CACHE_TIME
         )
+
+    def add_logs(self, log_event) -> None:
+        """ tbd
+        """
+        event_id = _new_log_event_id(self.userid)
+        self.data['SessionLogs'].append(log_event)
+
+        result = {
+            'ID': event_id,
+            'ZSessionID': self._id,
+            'LogDate': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3],
+            'ThermoBlockTemp': log_event['ThermoBlockTemp'],
+            'WortTemp': log_event['WortTemp'],
+            'AmbientTemp': log_event['AmbientTemp'],
+            'DrainTemp': log_event['DrainTemp'],
+            'TargetTemp': float(log_event['TargetTemp']),
+            'ValvePosition': float(log_event['ValvePosition']),
+            'KegPumpOn': False,
+            'DrainPumpOn': False,
+            'StepName': log_event['StepName'],
+            'ErrorCode': log_event['ErrorCode'],
+            'PauseReason': log_event['PauseReason'],
+            'rssi': log_event['rssi'],
+            'netSend': log_event['netSend'],
+            'netWait': log_event['netWait'],
+            'netRecv': log_event['netRecv'],
+            'SecondsRemaining': None,
+            'StillSessionLog': None,
+            'StillSessionLogID': None
+        }
+        return result
+
 
 class RecipeDB:
     """_summary_

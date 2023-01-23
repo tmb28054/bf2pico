@@ -1,5 +1,15 @@
 # Changelog for the Brewfather to Pico
 
+
+## [0.4.2] - 2023-01-23
+- Just a bump
+
+## [0.4.1] - 2023-01-23
+- fix new data session
+
+## [0.4.0] - 2023-01-23
+- fix session logs
+
 ## [0.3.3] - 2023-01-22
 - fix bug in gid
 
