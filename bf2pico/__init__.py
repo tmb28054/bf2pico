@@ -20,6 +20,7 @@ import os
 import random
 import string
 import sys
+import time
 
 
 import requests
@@ -402,6 +403,9 @@ class BrewLog:
         """ tbd
         """
         event_id = _new_log_event_id(self.userid)
+        if 'epoch' not in log_event:
+            log_event['epoch'] = int(time.time())
+
         self.data['SessionLogs'].append(log_event)
 
         result = {
