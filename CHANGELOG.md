@@ -1,5 +1,8 @@
 # Changelog for the Brewfather to Pico
 
+## [0.6.0] - 2023-02-11
+- Added utility for viewing sessions.
+
 ## [0.5.0] - 2023-02-11
 - Added epoch to logs events
 

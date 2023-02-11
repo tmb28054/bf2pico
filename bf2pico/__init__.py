@@ -362,8 +362,7 @@ class BrewLog:
         I manage the session of a brew event.
     """
     def __init__(self, **kwargs) -> object:
-        """
-            tdb
+        """ I am the init to a brew session
         """
         self.logger = logging.getLogger(__name__)
         self.logger.debug('Creating RecipeDB')
@@ -386,7 +385,7 @@ class BrewLog:
         self.index = f'{self.userid}-{self._id}'
 
     def save(self) -> None:
-        """ tbd
+        """ I save the session
         """
         CACHE.set(
             self.index,
@@ -399,8 +398,34 @@ class BrewLog:
                 json.dumps(self.data, indent=2)
             )
 
+        if 'finished_sessions' not in CACHE:
+            CACHE.set('finished_sessions', [], expire=DB_CACHE_TIME)
+        if 'finished_sessions' not in CACHE:
+            CACHE.set('finished_sessions', [], expire=DB_CACHE_TIME)
+
+        num_of_events = len(self.data.get('SessionLogs', []))
+
+        # manage sessions active vs not
+        if num_of_events:
+
+            if self.data['SessionLogs'].get('SecondsRemaining', 0):  # session done
+
+                if self.index in CACHE['active_sessions']: # remove from active
+                    CACHE.set(
+                        'active_sessions',
+                        list(CACHE['active_sessions']).remove(self.index),
+                        expire=DB_CACHE_TIME
+                    )
+                    if self.index not in CACHE['finished_sessions']:
+                        CACHE.set(
+                            'finished_sessions',
+                            list(CACHE['finished_sessions']).append(self.index),
+                            expire=DB_CACHE_TIME
+                        )
+
+
     def add_logs(self, log_event) -> None:
-        """ tbd
+        """ I add event logs to the session.
         """
         event_id = _new_log_event_id(self.userid)
         if 'epoch' not in log_event:
@@ -435,14 +460,7 @@ class BrewLog:
 
 
 class RecipeDB:
-    """_summary_
-
-    Raises:
-        Exception: _description_
-        Exception: _description_
-
-    Returns:
-        _type_: _description_
+    """ I am the class translating brewfather to pico
     """
     def __init__(self, **kwargs) -> object:
         """
@@ -459,12 +477,12 @@ class RecipeDB:
         self.recipe_list = {}
 
     def load(self) -> None:
-        """ tbd
+        """ Load the recipe list form cache
         """
         self.recipe_list = CACHE[self.userid]
 
     def save(self) -> None:
-        """ tbd
+        """ Save the recipe_list to cache
         """
         CACHE.set(
             self.userid,
@@ -473,16 +491,16 @@ class RecipeDB:
         )
 
     def add_recipe(self, recipe) -> None:
-        """ tbd
+        """ Add a recipe to the recipe_list
         """
         self.recipe_list[self.counter] = recipe
         self.counter += 1
 
     def fetch_recipe(self, _id: int):
-        """_summary_
+        """ Return the recipe from recipe id
 
         Args:
-            _id (_type_): _description_
+            _id (_type_): the id for the recipe
         """
         return self.recipe_list.get(
             int(_id),
@@ -494,7 +512,7 @@ class RecipeDB:
         )
 
     def list_recipes(self) -> None:
-        """ tbd
+        """ I return a list of recipes in pico format
         """
         recipes = []
         for _id, recipe in self.recipe_list.items():

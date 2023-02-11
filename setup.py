@@ -95,6 +95,11 @@ setup_options = dict(
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
     ],
+    entry_points={
+        'console_scripts': [
+            'brewplot = bf2pico.brewplot:main',
+        ]
+    },
 )
 
 setup(**setup_options)
