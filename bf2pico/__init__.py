@@ -384,6 +384,7 @@ class BrewLog:
 
         self.index = f'{self.userid}-{self._id}'
 
+
     def save(self) -> None:
         """ I save the session
         """
@@ -402,30 +403,24 @@ class BrewLog:
                 json.dumps(self.data, indent=2)
             )
 
-        if 'finished_sessions' not in CACHE:
-            CACHE.set('finished_sessions', [], expire=DB_CACHE_TIME)
-        if 'finished_sessions' not in CACHE:
-            CACHE.set('finished_sessions', [], expire=DB_CACHE_TIME)
+        active_sessions = CACHE.get('active_sessions', [])
+        finished_sessions = CACHE.get('finished_sessions', [])
+
+        if self.index not in active_sessions:
+            active_sessions.append(self.index)
 
         num_of_events = len(self.data.get('SessionLogs', []))
 
-        # manage sessions active vs not
         if num_of_events:
+            seconds_remaining = self.data['SessionLogs']\
+                [num_of_events - 1].get('SecondsRemaining', 0)
+            if not seconds_remaining:
+                active_sessions.remove(self.index)
+                if self.index not in finished_sessions:
+                    finished_sessions.append(self.index)
 
-            if self.data['SessionLogs'].get('SecondsRemaining', 0):  # session done
-
-                if self.index in CACHE['active_sessions']: # remove from active
-                    CACHE.set(
-                        'active_sessions',
-                        list(CACHE['active_sessions']).remove(self.index),
-                        expire=DB_CACHE_TIME
-                    )
-                    if self.index not in CACHE['finished_sessions']:
-                        CACHE.set(
-                            'finished_sessions',
-                            list(CACHE['finished_sessions']).append(self.index),
-                            expire=DB_CACHE_TIME
-                        )
+        CACHE.set('active_sessions', active_sessions, expire=DB_CACHE_TIME)
+        CACHE.set('finished_sessions', finished_sessions, expire=DB_CACHE_TIME)
 
 
     def add_logs(self, log_event) -> None:

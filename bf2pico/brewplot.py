@@ -48,18 +48,24 @@ def _options() -> object:
     #                     default='general',
     #                     help='The channel to post the message to.')
     parser.add_argument(
-        '--filename',
+        '--filename', '-f',
         default='example.json',
-        nargs='*'
+        help='the file to plot'
+    )
+    parser.add_argument(
+        '--save', '-s',
+        default='example.json',
+        help='the file to plot'
     )
     return parser.parse_args()
 
 
-def create_graph(filename: str):
+def create_graph(data: dict, filename: str):
     """ I create the graph
 
     Args:
-        filename (str): filename of the session data
+        data: dict of the session data
+        filename: the file to write the graph.
     """
     count = 1
     x_axis = []
@@ -67,8 +73,8 @@ def create_graph(filename: str):
     heat_temp = []
     drain_temp = []
     target_temp = []
-    session = load_session(filename)
-    for record in session['SessionLogs']:
+
+    for record in data['SessionLogs']:
         x_axis.append(count)
         wort_temp.append(celsius_to_fahrenheit(record['WortTemp']))
         heat_temp.append(celsius_to_fahrenheit(record['ThermoBlockTemp']))
@@ -86,23 +92,27 @@ def create_graph(filename: str):
             marker = 'o',label = "Target Temp")
 
     plt.xticks(rotation = 25)
-    plt.xlabel(f"Events {len(session['SessionLogs'])}")
+    plt.xlabel(f"Events {len(data['SessionLogs'])}")
     plt.ylabel('Temperature(°F)')
+    name = data.get('Name', 'unknown')
     plt.title(
-        f"{session['Name']} {session['CreationDate']}",
+        f"{name} {data['CreationDate']}",
         fontsize = 20
     )
     plt.grid()
     plt.legend()
-    plt.savefig('output.png')
-    # plt.show()
+    if filename:
+        plt.savefig(filename)
+    else:
+        plt.show()
 
 
 def main():
     """ main method
     """
     args = _options()
-    create_graph(args.filename)
+    data = load_session(args.filename)
+    create_graph(data, args.save)
 
 
 if __name__ == '__main__':

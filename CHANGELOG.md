@@ -1,5 +1,17 @@
 # Changelog for the Brewfather to Pico
 
+## [0.6.10] - 2023-02-12
+- fux
+
+## [0.6.5] - 2023-02-12
+- Fixed active_sessions bu
+
+## [0.6.4] - 2023-02-12
+- Fixed active_sessions bug
+
+## [0.6.3] - 2023-02-12
+- Fixed session management bug
+
 ## [0.6.2] - 2023-02-12
 - Fixed bug ensuring data directory is created
 
