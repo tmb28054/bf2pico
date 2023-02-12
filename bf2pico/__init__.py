@@ -479,7 +479,7 @@ class RecipeDB:
     def load(self) -> None:
         """ Load the recipe list form cache
         """
-        self.recipe_list = CACHE[self.userid]
+        self.recipe_list = CACHE.get(self.userid, {})
 
     def save(self) -> None:
         """ Save the recipe_list to cache

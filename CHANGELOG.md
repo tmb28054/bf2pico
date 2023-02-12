@@ -1,5 +1,8 @@
 # Changelog for the Brewfather to Pico
 
+## [0.6.1] - 2023-02-12
+- fixed empty cache bug.
+
 ## [0.6.0] - 2023-02-11
 - Added utility for viewing sessions.
 
