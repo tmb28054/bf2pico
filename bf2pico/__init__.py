@@ -393,6 +393,10 @@ class BrewLog:
             expire=DB_CACHE_TIME
         )
         filename = f'data/session-{self.index}.json'
+
+        if not os.path.exists('data'):
+            os.makedirs('data')
+
         with open(filename, 'w', encoding='utf8') as handler:
             handler.write(
                 json.dumps(self.data, indent=2)

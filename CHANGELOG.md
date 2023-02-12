@@ -1,5 +1,8 @@
 # Changelog for the Brewfather to Pico
 
+## [0.6.2] - 2023-02-12
+- Fixed bug ensuring data directory is created
+
 ## [0.6.1] - 2023-02-12
 - fixed empty cache bug.
 
