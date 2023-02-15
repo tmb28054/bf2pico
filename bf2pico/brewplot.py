@@ -4,7 +4,7 @@
 
 import argparse
 import json
-
+import time
 
 
 import matplotlib.pyplot as plt
@@ -43,10 +43,6 @@ def _options() -> object:
             argparse parser object.
     """
     parser = argparse.ArgumentParser()
-    # parser.add_argument('--filename', '-c',
-    #                     required=False,
-    #                     default='general',
-    #                     help='The channel to post the message to.')
     parser.add_argument(
         '--filename', '-f',
         default='example.json',
@@ -54,7 +50,7 @@ def _options() -> object:
     )
     parser.add_argument(
         '--save', '-s',
-        default='example.json',
+        default='',
         help='the file to plot'
     )
     return parser.parse_args()
@@ -92,9 +88,13 @@ def create_graph(data: dict, filename: str):
             marker = 'o',label = "Target Temp")
 
     plt.xticks(rotation = 25)
-    plt.xlabel(f"Events {len(data['SessionLogs'])}")
     plt.ylabel('Temperature(°F)')
     name = data.get('Name', 'unknown')
+    start_epoch = data['SessionLogs'][0]['epoch']
+    start_time = time.strftime('%H:%M', time.localtime(start_epoch))
+    stop_epoch = data['SessionLogs'][len(data['SessionLogs']) -1]['epoch']
+    stop_time = time.strftime('%H:%M', time.localtime(stop_epoch))
+    plt.xlabel(f'{start_time} - {stop_time}')
     plt.title(
         f"{name} {data['CreationDate']}",
         fontsize = 20
