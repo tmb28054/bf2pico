@@ -98,6 +98,7 @@ setup_options = dict(
     entry_points={
         'console_scripts': [
             'brewplot = bf2pico.brewplot:main',
+            'events = bf2pico.events:main',
         ]
     },
 )

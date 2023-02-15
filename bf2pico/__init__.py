@@ -372,6 +372,11 @@ class BrewLog:
             os.getenv('BREWFATHER_USERID', None)
         )
 
+        self.device_id = kwargs.get(
+            'device_id',
+            os.getenv('BREWFATHER_DEFAULT_DEVIDE', '30aea4c73164')
+        )
+
         if kwargs.get('_id', None):
             self._id = kwargs.get('_id')
             self.data = CACHE.get(

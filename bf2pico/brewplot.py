@@ -10,7 +10,6 @@ import time
 import matplotlib.pyplot as plt
 
 
-
 def load_session(filename: str) -> dict:
     """ Load the session file
 
@@ -94,9 +93,10 @@ def create_graph(data: dict, filename: str):
     start_time = time.strftime('%H:%M', time.localtime(start_epoch))
     stop_epoch = data['SessionLogs'][len(data['SessionLogs']) -1]['epoch']
     stop_time = time.strftime('%H:%M', time.localtime(stop_epoch))
-    plt.xlabel(f'{start_time} - {stop_time}')
+    brew_date = time.strftime('%Y-%m', time.localtime(start_epoch))
+    plt.xlabel(f'{brew_date} {start_time} - {stop_time}')
     plt.title(
-        f"{name} {data['CreationDate']}",
+        name,
         fontsize = 20
     )
     plt.grid()
