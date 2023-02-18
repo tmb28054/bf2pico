@@ -141,14 +141,10 @@ def _fix_mash(steps: list) -> list:
     Returns:
         list: list of pico brew steps
     """
-    # print(f'recipe before')
-    # print(json.dumps(steps, indent=2))
     if steps[0]['Name'] == 'Heat Mash' and steps[1]['Name'] == 'Mash' \
             and steps[1]['Time'] == 0:
         del steps[0]
         del steps[0]
-    # print(f'recipe after')
-    # print(json.dumps(steps, indent=2))
     return steps
 
 
@@ -170,21 +166,17 @@ def _gen_pico(recipe: dict) -> dict:
         steps += [
             { # Raise the water temp
                 'Drain':  0,
-                # 'hop_time': '',
                 'Location': PICO_LOCATIONS.get('PassThru', 0),
                 'Name': 'Heat Mash',
                 'Time': 0,
                 'Temp': celsius2fahrenheit(step['stepTemp']),
-                # 'total_time': 0
             },
             { # Convert carbs to sugar
                 'Drain':  DRAINTIME,
-                # 'hop_time': '',
                 'Location': PICO_LOCATIONS.get('Mash', 0),
                 'Name': 'Mash',
                 'Time': step['stepTime'],
                 'Temp': celsius2fahrenheit(step['stepTemp']),
-                # 'total_time': step['stepTime'] + DRAINTIME
             },
         ]
 
@@ -192,12 +184,10 @@ def _gen_pico(recipe: dict) -> dict:
     steps += [
         {
             'Drain':  0,
-            # 'hop_time': '',
             'Location': PICO_LOCATIONS.get('PassThru', 0),
             'Name': 'Heat to Boil',
             'Time': 0,
             'Temp': 207,
-            # 'total_time': 0
         },
     ]
 
@@ -212,44 +202,42 @@ def _gen_pico(recipe: dict) -> dict:
             hops[hop['time']] = [hop]
 
     adjusted_hops = []
-    sub = 0
+    total_hop_time = 0
     for hop in sorted(hops):
-        hop -= - sub
-        sub += hop
-        adjusted_hops.append(hop)
+        adj_hob = hop - total_hop_time
+        total_hop_time = hop
+        print(f'Hop = {hop}, adj_hob = {adj_hob}, total_hop_time = {total_hop_time}')
+        adjusted_hops.append(adj_hob)
 
-    # run the hops in order they should be added
+    # do we boil before our first hop?
+    if total_hop_time < boil_time:
+        steps += [
+            {
+                'Drain':  0,
+                'Location': PICO_LOCATIONS.get('PassThru', 0),
+                'Name': 'Pre-hop Boil',
+                'Time': boil_time - total_hop_time,
+                'Temp': 207,
+            }
+        ]
+
+   # run the hops in order they should be added
     slot = 1
+    print(f'Boil Time: {boil_time}')
     for index in reversed(adjusted_hops):
         if boil_time < index:
-            LOG.info('boil time less then hop time, adjusting boil time')
+            LOG.info('boil time less then hop time, adjusting boil time to %s', index)
             boil_time = index
 
-        # how long to boil before next hop step
-        step_time = boil_time - index
-        if slot == 1 and step_time:
-            steps += [
-                {
-                    'Drain':  0,
-                    # 'hop_time': '',
-                    'Location': PICO_LOCATIONS.get('PassThru', 0),
-                    'Name': 'Pre-hop Boil',
-                    'Time': step_time,
-                    'Temp': 207,
-                    # 'total_time': step_time
-                }
-            ]
 
         # add the hops
         steps += [
             {
                 'Drain':  0,
-                # 'hop_time': index,
                 'Location': PICO_LOCATIONS.get(f'Adjunct{slot}', 0),
                 'Name': f'Hops {slot}',
                 'Time': index,
                 'Temp': 207,
-                # 'total_time': index
             },
         ]
 
@@ -260,25 +248,20 @@ def _gen_pico(recipe: dict) -> dict:
         steps += [
             {
                 'Drain':  0,
-                # 'hop_time': '',
                 'Location': PICO_LOCATIONS.get('PassThru', 0),
                 'Name': 'Cool to Whirlpool',
                 'Time': 0,
                 'Temp': 175,
-                # 'total_time': 0
             },
             {
                 'Drain':  5,
-                # 'hop_time': whirlpool,
                 'Location': PICO_LOCATIONS.get(f'Adjunct{slot}', 0),
                 'Name': 'Whirlpool',
                 'Time': whirlpool,
                 'Temp': 175,
-                # 'total_time': whirlpool + 5
             },
         ]
 
-    # print(f"Recipe: {recipe['name']}")
     steps = \
         _fix_noboil(
             _fix_mash(
