@@ -36,6 +36,7 @@ logging.basicConfig(
 CACHE = diskcache.Cache('~/.bf2pico')
 CACHE_TIME = int(os.getenv('BF2PICO_CACHE', '60')) # 1 min
 DB_CACHE_TIME = 60 * 60 * 24 * 365 * 10 # 10 years
+EVENT_CACHE_TIME = 60 * 60 * 48 # 2 days
 
 
 DRAINTIME = 8
@@ -350,7 +351,7 @@ def get_recipes(auth) -> dict:
     return recipes
 
 
-def get_batchs(auth) -> dict:
+def get_batchs(auth: str) -> dict:
     """
         I get a list of batchs which are marked for brewing in brewfather
 
@@ -364,7 +365,7 @@ def get_batchs(auth) -> dict:
         return CACHE[f'{auth}batchs']
 
     response = requests.get(
-        'https://api.brewfather.app/v1/batches?limit=50&status=Brewing',
+        'https://api.brewfather.app/v2/batches?limit=50&status=Planning',
         headers={
             'Content-Type': 'json',
             'authorization': f'Basic {auth}'
@@ -390,7 +391,7 @@ def _new_log_event_id(user_id) -> int:
     counter = 21204557
     while f'{user_id}-event-{counter}' in CACHE:
         counter += 1
-    CACHE.set(f'{user_id}-event-{counter}', True, expire=DB_CACHE_TIME)
+    CACHE.set(f'{user_id}-event-{counter}', True, expire=EVENT_CACHE_TIME)
     return counter
 
 

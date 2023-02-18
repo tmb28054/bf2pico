@@ -1,5 +1,8 @@
 # Changelog for the Brewfather to Pico
 
+## [0.8.3] - 2023-02-19
+- Added Chiller logic
+
 ## [0.8.0] - 2023-02-18
 - Added Chiller logic
 

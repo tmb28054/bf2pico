@@ -13,7 +13,7 @@ import diskcache
 import requests
 
 
-from bf2pico import brewplot
+from bf2pico import brewplot, BrewFather
 
 
 LOG = logging.getLogger(__name__)
@@ -28,6 +28,59 @@ CACHE_TIME = 60 * 60 * 24 * 365 * 10 # 10 years
 
 WEBSITE = os.getenv('WEBSITE', 'https://pico.botthouse.net/')
 
+AUTH_MAP = {
+    # 'userid': 'apikey',
+    'svBIOT7PHdhEV4gSpKEOvRkO1od2': \
+        'FgiPp2bShCfhjiEVMz8A4wioIcYszjYeHZbbLihsszZ54QkMX3B2mZWqketCXy4G'
+}
+
+def change_batch_status(status: str, data: dict) -> None:
+    """ I update the batch to brewing
+
+    Args:
+        auth (str): _description_
+        _id (str): _description_
+    """
+    status_options = {
+        'planning': 'Planning',
+        'fermenting': 'Fermenting',
+        'brewing': 'Brewing'
+    }
+    userid = data['session_name'].split('-')[0]
+    apikey = AUTH_MAP[userid]
+    auth = f'{userid}:{apikey}'
+
+
+    # bf_handler = BrewFather(userid=userid, apikey=apikey)
+    batch_key = f'{auth}batchs'
+    if batch_key not in CACHE:
+        recipes = BrewFather(userid=userid, apikey=apikey)
+        recipes.start_session()
+        if batch_key not in CACHE:
+            LOG.debug('Unable to find batch')
+            return None
+
+    batch_list = CACHE[f'{auth}batchs']
+    print(json.dumps(batch_list, indent=2))
+
+
+    _id = 'fff'
+    print(status_options[status.lower()])
+    # https://api.brewfather.app/v2/batches/:id
+    print(json.dumps(data, indent=2))
+    # response = requests.patch(
+    #     f'https://api.brewfather.app/v2/batches/:{_id}',
+    #     data={
+    #         'status': status_options[status.lower()],
+    #     },
+    #     headers={
+    #         'Content-Type': 'json',
+    #         'authorization': f'Basic {auth}'
+    #     }
+    # )
+    # print(response)
+    return None
+
 
 def settle_active() -> None:
     """ I loop through the active sessions and if there isn't seconds remaining
@@ -35,9 +88,17 @@ def settle_active() -> None:
     """
     LOG.debug('running settle_active')
     active_sessions = CACHE.get('active_sessions', [])
+    previous_active_sessions = CACHE.get('previous_active_sessions', [])
     finished_sessions = CACHE.get('finished_sessions', [])
     for session in active_sessions:
         data = CACHE.get(session, {})
+
+        data['session_name'] = session
+
+        if session not in previous_active_sessions:
+            change_batch_status('brewing', data)
+
+        sys.exit(1)
         num_of_event = len(data['SessionLogs'])
         if num_of_event:
             last_record = data['SessionLogs'][num_of_event - 1]
