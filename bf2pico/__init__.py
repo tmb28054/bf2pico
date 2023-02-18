@@ -117,6 +117,41 @@ def celsius2fahrenheit(celsius: int) -> int:
     return int((celsius * 1.8) + 32)
 
 
+def _fix_noboil(steps: list) -> list:
+    """ I fix the noboil bug
+
+    Args:
+        steps (list): list of pico brew steps
+
+    Returns:
+        list: list of pico brew steps
+    """
+    last_record = len(steps) - 1
+    if steps[last_record]['Name'] == 'Heat to Boil':
+        del steps[last_record]
+    return steps
+
+
+def _fix_mash(steps: list) -> list:
+    """ I fix a brew recipe that boils without a mash
+
+    Args:
+        steps (list): list of pico brew steps
+
+    Returns:
+        list: list of pico brew steps
+    """
+    # print(f'recipe before')
+    # print(json.dumps(steps, indent=2))
+    if steps[0]['Name'] == 'Heat Mash' and steps[1]['Name'] == 'Mash' \
+            and steps[1]['Time'] == 0:
+        del steps[0]
+        del steps[0]
+    # print(f'recipe after')
+    # print(json.dumps(steps, indent=2))
+    return steps
+
+
 def _gen_pico(recipe: dict) -> dict:
     """
         I generate a pico run plan from a brewfather recipe.
@@ -242,6 +277,14 @@ def _gen_pico(recipe: dict) -> dict:
                 # 'total_time': whirlpool + 5
             },
         ]
+
+    # print(f"Recipe: {recipe['name']}")
+    steps = \
+        _fix_noboil(
+            _fix_mash(
+                steps
+            )
+        )
 
     pico = {
         'ID': recipe['_id'],

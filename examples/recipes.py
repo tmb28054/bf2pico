@@ -41,6 +41,10 @@ def _options() -> object:
         required=False,
         default=os.getenv('BREWFATHER_USERID', ''),
         help='The userid to use when connecting to brewfather.')
+    parser.add_argument('--recipe',
+        required=False,
+        default='',
+        help='The recipe to fetch.')
     return parser.parse_args()
 
 
@@ -55,16 +59,32 @@ def _main() -> None:
     if args.purge:
         CACHE.clear()
 
-    recipe = BrewFather(
+    bf_hander = BrewFather(
         userid=args.userid,
         apikey=args.apikey
     )
+    recipes_list = bf_hander.start_session()
     print(
         json.dumps(
-            recipe.start_session(),
+            recipes_list,
             indent=2
         )
     )
+    if args.recipe:
+        pico_recipe = ''
+        for recipe in recipes_list['Recipes']:
+            if recipe['Name'] == args.recipe:
+                pico_recipe = bf_hander.get_recipe(recipe['ID'])
+                print(
+                    json.dumps(
+                        pico_recipe,
+                        indent=2
+                    )
+                )
+                break
+        if not pico_recipe:
+            print(f'"{pico_recipe}" not found')
+
 
 if __name__ == '__main__':
     _main()
