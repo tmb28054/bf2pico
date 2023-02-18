@@ -1,7 +1,12 @@
 # Changelog for the Brewfather to Pico
 
-## [0.7.1] - 2023-02-15
-- noop
+## [0.8.0] - 2023-02-18
+- Added Chiller logic
+
+## [0.7.1] - 2023-02-18
+- fixed hop times
+- fixed noboil
+- fixed nomash
 
 ## [0.7.0] - 2023-02-15
 - Updated graph meta data

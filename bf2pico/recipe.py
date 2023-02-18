@@ -48,7 +48,6 @@ def _options() -> object:
     return parser.parse_args()
 
 
-
 def _main() -> None:
     """
         Main Logic
@@ -64,12 +63,6 @@ def _main() -> None:
         apikey=args.apikey
     )
     recipes_list = bf_hander.start_session()
-    print(
-        json.dumps(
-            recipes_list,
-            indent=2
-        )
-    )
     if args.recipe:
         pico_recipe = ''
         for recipe in recipes_list['Recipes']:
@@ -84,7 +77,13 @@ def _main() -> None:
                 break
         if not pico_recipe:
             print(f'"{pico_recipe}" not found')
-
+    else:
+        print(
+            json.dumps(
+                recipes_list,
+                indent=2
+            )
+        )
 
 if __name__ == '__main__':
     _main()

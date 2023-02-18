@@ -99,6 +99,7 @@ setup_options = dict(
         'console_scripts': [
             'brewplot = bf2pico.brewplot:main',
             'events = bf2pico.events:main',
+            'recipe = bf2pico.recipe:_main',
         ]
     },
 )

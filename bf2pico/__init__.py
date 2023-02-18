@@ -148,6 +148,37 @@ def _fix_mash(steps: list) -> list:
     return steps
 
 
+def _chill_patch(recipe: dict) -> list:
+    """ I return the chill steps if the recipe calls for it
+
+    Args:
+        recipe (dict): Dict of the BrewFather Recipe
+
+    Returns:
+        list: List of pico steps to chill
+    """
+    result = []
+    for record in recipe.get('miscs', []):
+        if record['name'].lower() == 'chill':
+            result = [
+                {
+                    "Name": "Connect Chiller",
+                    "Temp": 52,
+                    "Time": 0,
+                    "Location": 6,
+                    "Drain": 0
+                },
+                {
+                    "Name": "Chill",
+                    "Temp": record['amount'],
+                    "Time": record['time'],
+                    "Location": 0,
+                    "Drain": 10
+                }
+            ]
+    return result
+
+
 def _gen_pico(recipe: dict) -> dict:
     """
         I generate a pico run plan from a brewfather recipe.
@@ -160,6 +191,7 @@ def _gen_pico(recipe: dict) -> dict:
 
     steps = []
     whirlpool = 0
+    chill = _chill_patch(recipe)
 
     # build the mash steps
     for step in recipe['mash']['steps']:
@@ -206,7 +238,6 @@ def _gen_pico(recipe: dict) -> dict:
     for hop in sorted(hops):
         adj_hob = hop - total_hop_time
         total_hop_time = hop
-        print(f'Hop = {hop}, adj_hob = {adj_hob}, total_hop_time = {total_hop_time}')
         adjusted_hops.append(adj_hob)
 
     # do we boil before our first hop?
@@ -223,7 +254,6 @@ def _gen_pico(recipe: dict) -> dict:
 
    # run the hops in order they should be added
     slot = 1
-    print(f'Boil Time: {boil_time}')
     for index in reversed(adjusted_hops):
         if boil_time < index:
             LOG.info('boil time less then hop time, adjusting boil time to %s', index)
@@ -268,6 +298,9 @@ def _gen_pico(recipe: dict) -> dict:
                 steps
             )
         )
+
+    if chill:
+        steps += chill
 
     pico = {
         'ID': recipe['_id'],
