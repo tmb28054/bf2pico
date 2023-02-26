@@ -68,24 +68,24 @@ def get_requirements() -> list:
 
 
 PROJECT = load_project()
-setup_options = dict(
-    description='Convert Brewfather Recipes to Pico Brew Steps',
-    long_description=get_readme(),
-    long_description_content_type='text/markdown',
-    license='Apache License 2.0',
-    url='https://github.com/tmb28054/cftcli',
-    name=PROJECT['PyPackageName'],
-    version=get_changelog(),
-    author=PROJECT['Owner'],
-    author_email=PROJECT['OwnerEmail'],
-    scripts=[],
-    package_data={
+setup_options = {
+    'description': 'Convert Brewfather Recipes to Pico Brew Steps',
+    'long_description': get_readme(),
+    'long_description_content_type': 'text/markdown',
+    'license': 'Apache License 2.0',
+    'url': 'https://github.com/tmb28054/cftcli',
+    'name': PROJECT['PyPackageName'],
+    'version': get_changelog(),
+    'author': PROJECT['Owner'],
+    'author_email': PROJECT['OwnerEmail'],
+    'scripts': [],
+    'package_data': {
         PROJECT['PyPackageName']: []
     },
-    packages=[PROJECT['PyPackageName']],
-    include_package_data=True,
-    install_requires=get_requirements(),
-    classifiers=[
+    'packages': [PROJECT['PyPackageName']],
+    'include_package_data': True,
+    'install_requires': get_requirements(),
+    'classifiers': [
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'Natural Language :: English',
@@ -95,13 +95,14 @@ setup_options = dict(
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
     ],
-    entry_points={
+    'entry_points': {
         'console_scripts': [
             'brewplot = bf2pico.brewplot:main',
             'events = bf2pico.events:main',
             'recipe = bf2pico.recipe:_main',
+            'zymatic = bf2pico.zymatic_cli:main',
         ]
     },
-)
+}
 
 setup(**setup_options)

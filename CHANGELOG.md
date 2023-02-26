@@ -1,5 +1,12 @@
 # Changelog for the Brewfather to Pico
 
+## [1.0.16] - 2023-03-04
+- fux
+
+## [1.0.0] - 2023-03-02
+- Updated to make use of objects
+- Added AWS adoptiong s3 for storage and parameter store for parameters
+
 ## [0.8.3] - 2023-02-19
 - Added Chiller logic
 

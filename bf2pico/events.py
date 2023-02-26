@@ -1,188 +1,131 @@
 """ I write the brewlog to brewfather
 """
 
+
+import argparse
 import json
-import logging
-import os
 import sys
 import time
 
 
 import boto3
-import diskcache
-import requests
 
 
-from bf2pico import brewplot, BrewFather
-
-
-LOG = logging.getLogger(__name__)
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(message)s",
-    stream=sys.stdout
+from bf2pico import (
+    BUCKET,
+    LOG,
+    PARAMETER_PREFIX,
+    WEBSITE,
+    brewfather,
+    brewplot,
+    pico,
+    prosaic,
 )
-CACHE = diskcache.Cache('~/.bf2pico')
-
-CACHE_TIME = 60 * 60 * 24 * 365 * 10 # 10 years
-
-WEBSITE = os.getenv('WEBSITE', 'https://pico.botthouse.net/')
-
-AUTH_MAP = {
-    # 'userid': 'apikey',
-    'svBIOT7PHdhEV4gSpKEOvRkO1od2': \
-        'FgiPp2bShCfhjiEVMz8A4wioIcYszjYeHZbbLihsszZ54QkMX3B2mZWqketCXy4G'
-}
-
-def change_batch_status(status: str, data: dict) -> None:
-    """ I update the batch to brewing
-
-    Args:
-        auth (str): _description_
-        _id (str): _description_
-    """
-    status_options = {
-        'planning': 'Planning',
-        'fermenting': 'Fermenting',
-        'brewing': 'Brewing'
-    }
-    userid = data['session_name'].split('-')[0]
-    apikey = AUTH_MAP[userid]
-    auth = f'{userid}:{apikey}'
 
 
-    # bf_handler = BrewFather(userid=userid, apikey=apikey)
-    batch_key = f'{auth}batchs'
-    if batch_key not in CACHE:
-        recipes = BrewFather(userid=userid, apikey=apikey)
-        recipes.start_session()
-        if batch_key not in CACHE:
-            LOG.debug('Unable to find batch')
-            return None
-
-    batch_list = CACHE[f'{auth}batchs']
-    print(json.dumps(batch_list, indent=2))
-
-
-    _id = 'fff'
-    print(status_options[status.lower()])
-    # https://api.brewfather.app/v2/batches/:id
-    print(json.dumps(data, indent=2))
-    # response = requests.patch(
-    #     f'https://api.brewfather.app/v2/batches/:{_id}',
-    #     data={
-    #         'status': status_options[status.lower()],
-    #     },
-    #     headers={
-    #         'Content-Type': 'json',
-    #         'authorization': f'Basic {auth}'
-    #     }
-    # )
-    # print(response)
-    return None
-
-
-def settle_active() -> None:
+def settle_active() -> None:  # pylint: disable=too-many-locals
     """ I loop through the active sessions and if there isn't seconds remaining
         move them to finished sessions.
     """
     LOG.debug('running settle_active')
-    active_sessions = CACHE.get('active_sessions', [])
-    previous_active_sessions = CACHE.get('previous_active_sessions', [])
-    finished_sessions = CACHE.get('finished_sessions', [])
-    for session in active_sessions:
-        data = CACHE.get(session, {})
 
-        data['session_name'] = session
-
-        if session not in previous_active_sessions:
-            change_batch_status('brewing', data)
-
-        sys.exit(1)
-        num_of_event = len(data['SessionLogs'])
-        if num_of_event:
-            last_record = data['SessionLogs'][num_of_event - 1]
-            sec_left = last_record.get('SecondsRemaining', None)
-            if not sec_left:
-                LOG.info('moving %s from active to finished', session)
-                active_sessions.remove(session)
-                finished_sessions.append(session)
-
-    CACHE.set('active_sessions', active_sessions, expire=CACHE_TIME)
-    CACHE.set('finished_sessions', finished_sessions, expire=CACHE_TIME)
-
-
-def run_session(session: str) -> None:
-    """ I run the session
-    """
-    data = CACHE.get(session, {})
-    if not 'SessionLogs' in data:
-        data['SessionLogs'] = []
-    brewplot.create_graph(data, f'data/{session}.png')
-
+    users = prosaic.get_parameters(f'{PARAMETER_PREFIX}/users/')
     s3_client = boto3.client('s3')
-    year_month_day = time.strftime('%Y-%m-%d', time.localtime(int(time.time())))
-    graph_key = f'data/{year_month_day}/{session}.png'
-    response = s3_client.upload_file(
-        f'data/{session}.png',
-        os.getenv('BUCKET', 'picobrew'),
-        graph_key
-    )
-    LOG.debug(json.dumps(response, default=str))
-    data_key = f'data/{year_month_day}/{session}.json'
-    response = s3_client.put_object(
-        Body=json.dumps(CACHE.get(session, {}), indent=2),
-        Bucket=os.getenv('BUCKET', 'picobrew'),
-        Key=data_key
-    )
-    LOG.debug(json.dumps(response, default=str))
+    for user_id in users:
+        active_key = f'active-sessions/{user_id}.json'
+        finished_key = f'finished-sessions/{user_id}.json'
 
-    data['data_url'] = f'{WEBSITE}{data_key}'
-    data['graph_url'] = f'{WEBSITE}{graph_key}'
-    data['session'] = session
+        active_sessions = json.loads(prosaic.s3_get(active_key, '[]]'))
+        finished_sessions = json.loads(prosaic.s3_get(finished_key, '[]'))
 
-    update_brewlog(data)
+        LOG.info('Finished sessions is %s', json.dumps(finished_sessions))
+
+        for session in active_sessions:
+            session_key = f"sessions/{session.replace('-', '/')}.json"
+            data = json.loads(prosaic.s3_get(session_key, '{}'))
+
+            num_of_event = len(data['SessionLogs'])
+            if num_of_event:
+                last_record = data['SessionLogs'][num_of_event - 1]
+                sec_left = last_record.get('SecondsRemaining', None)
+                if not sec_left:
+                    LOG.info('moving %s from active to finished', session)
+                    active_sessions.remove(session)
+                    finished_sessions.append(session)
+
+                    if data['Name'] != 'RINSE':
+                        LOG.debug('Changing Batch %s to fermenting', data['Pico_Id'])
+                        creds = brewfather.BrewAuth(device_id=data['device_id'])
+                        pico.change_batch_state(creds, data['Pico_Id'], 'fermenting')
 
 
-def update_brewlog(data: dict) -> None:
-    """_summary_
+        prosaic.s3_put(json.dumps(active_sessions), active_key)
 
-    Args:
-        data (dict): _description_
-    """
-    user_id = data['session'].split('-')[0]
+        # running active sessions
+        for session_id in finished_sessions:
+            pico_id = session_id.split('-')[1]
+            session_key = f'sessions/{user_id}/{pico_id}.json'
+            session = json.loads(prosaic.s3_get(session_key, '{}'))
 
-    response = requests.post(
-        f'https://api.brewfather.app/stream?id={user_id}',
-        headers={
-            'Content-Type': 'json',
-        },
-        json={
-            'name': data.get('device_id', '30aea4c73164'),
-            'beer': data.get('Name', 'unknown'),
-            'comment': (
-                "Brew Complete Graph is {data['graph_url']} "
-                "the data file is {data['data_url']}"
+            local_graph =  f'data/{session_id}.png'
+            brewplot.create_graph(session, local_graph)
+            LOG.info('Graph Created %s', local_graph)
+            year_month_day = time.strftime('%Y-%m-%d', time.localtime(int(time.time())))
+            graph_key = f'graphs/{user_id}/{year_month_day}/{session_id}.png'
+            response = s3_client.upload_file(
+                local_graph,
+                BUCKET,
+                graph_key
             )
-        }
-    )
-    print(response.status_code)
-    print(response.text)
+            LOG.debug(json.dumps(response, default=str))
+            # session['session'] = session
+            LOG.info(
+                f"""
+                    name = '{session['Name']}'
+                    user_id = '{user_id}'
+                    device_id = '{session['device_id']}'
+                    comment = 'boobs'
+                """
+            )
+            brewfather.update_brewlog(
+                session['Name'],
+                user_id,
+                session['device_id'],
+                f'Brew Complete Graph is {WEBSITE}{graph_key} '\
+                    f'the data file is {WEBSITE}/{session_key}'
+            )
+            # finished_sessions.pop(session_id)
 
+            sys.exit(1)
+
+        prosaic.s3_put(json.dumps(finished_sessions), finished_key)
+
+def _options() -> object:
+    """
+        I provide the argparse option set.
+
+        Returns
+            argparse parser object.
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--loop',
+                        dest='loop',
+                        required=False,
+                        default=False,
+                        action='store_true',
+                        help='Enables Termination Protection')
+    return parser.parse_args()
 
 
 def main() -> None:
     """ Main Body
     """
-    LOG.debug('Starting True Loop')
-    while True:
-        # try:
+    args = _options()
+    if args.loop:
+        LOG.debug('Starting True Loop')
+        while True:
+            # try:
+            settle_active()
+            time.sleep(15 * 60)  # 15 minutes
+    else:
         settle_active()
-        LOG.debug('Starting Session Loop')
-        for session in CACHE.get('finished_sessions', []):
-            run_session(session)
-
-        # except BaseException as error:  # pylint: disable=broad-except
-        #     LOG.info('An exception occurred: %s', str(error))
-
-        time.sleep(15 * 60)  # 15 minutes

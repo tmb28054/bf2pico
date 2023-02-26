@@ -1,4 +1,6 @@
 boto3
 diskcache
+flask
+gunicorn
 matplotlib
 requests
