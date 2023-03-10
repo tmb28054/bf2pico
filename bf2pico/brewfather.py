@@ -302,6 +302,7 @@ class BrewFatherUsers:
         """
         self.users = prosaic.get_parameters(f'{PARAMETER_PREFIX}/users/')
         self.devices = prosaic.get_parameters(f'{PARAMETER_PREFIX}/devices/')
+        self.emails = prosaic.get_parameters(f'{PARAMETER_PREFIX}/emails/')
 
     def put_user(self, **kwarg) -> None:
         """ I add a parameter with user and apikey
@@ -317,6 +318,21 @@ class BrewFatherUsers:
             self.users[username] = apikey
         else:
             raise Exception('Both username and apikey required')  # pylint: disable=broad-exception-raised
+
+    def put_email(self, **kwarg) -> None:
+        """ I add a parameter with user and apikey
+
+        kwarg:
+            username (str): brewfather user_id
+            email (str): email address to send notifications.
+        """
+        username = kwarg.get('username', '')
+        email = kwarg.get('email', '')
+        if username and email:
+            prosaic.put_parameter(f'{PARAMETER_PREFIX}/emails/{username}', email)
+            self.emails[username] = email
+        else:
+            raise Exception('Both username and email required')  # pylint: disable=broad-exception-raised
 
     def delete_user(self, username: str) -> None:
         """ I delete a brewfather user
@@ -350,6 +366,15 @@ class BrewFatherUsers:
         """
         prosaic.delete_parameter(f'{PARAMETER_PREFIX}/devices/{device_id}')
         self.users.pop(device_id)
+
+    def delete_email(self, user_id: str) -> None:
+        """ I provide ability to delete a device
+
+        Args:
+            user_id (str): the brewfather user_id to add the email too.
+        """
+        prosaic.delete_parameter(f'{PARAMETER_PREFIX}/email/{user_id}')
+        self.emails.pop(user_id)
 
 
 class BrewAuth:  # pylint: disable=too-few-public-methods

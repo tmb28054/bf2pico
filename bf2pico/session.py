@@ -9,10 +9,15 @@ import string
 import time
 
 
-from bf2pico import (
+from bf2picseo import (
+    BUCKET,
     CACHE,
+    FROM_EMAIL,
     LOG,
+    PARAMETER_PREFIX,
+    WEBSITE,
     brewfather,
+    brewplot,
     pico,
     prosaic,
 )
@@ -48,6 +53,48 @@ DEFAULT_SESSION_DATA = {
     'SessionLogs': [],
     'SecondsRemaining': None
 }
+
+
+def close_brewing(user_id: str, session_id: str, session_data: dict) -> None:
+    """ I create graphs and email the results closing out brewing.
+
+    Args:
+        user_id (str): The brewfather user_id
+        session_id (str): The unique id for the brew session.
+        session_data (dict): The data for the brew session
+    """
+    emails = prosaic.get_parameters(f'{PARAMETER_PREFIX}/emails/')
+    local_graph =  f'data/{session_id}.png'
+    brewplot.create_graph(session_data, local_graph)
+    LOG.info('Graph Created %s', local_graph)
+    year_month_day = time.strftime('%Y-%m-%d', time.localtime(int(time.time())))
+    graph_key = f'graphs/{user_id}/{year_month_day}/{session_id}.png'
+    response = prosaic.S3.upload_file(
+        local_graph,
+        BUCKET,
+        graph_key
+    )
+    LOG.debug(json.dumps(response, default=str))
+    pico_id = session_data['Pico_Id']
+    recipe = pico.get_list_recipes_map(user_id)['by_pico_id'][str(pico_id)]
+    graph_url = f'{WEBSITE}{graph_key}'
+    data_url = f"{WEBSITE}sessions/{user_id}/{session_data['ID']}.json"
+    LOG.debug('Sending Email')
+    prosaic.email(
+        FROM_EMAIL,
+        emails[user_id],
+        f"'{session_data.get('Name', 'unknown')}' brew complete!",
+        (
+            f"'{session_data.get('Name', 'unknown')}' brew complete!\n"
+            "The brewfather brewing is https://web.brewfather.app/tabs/"
+            f"batches/batch/{recipe['batch_id']}\n"
+            "The brewfather recipe is https://web.brewfather.app/tabs/"
+            f"recipes/recipe/{recipe['recipe_id']}\n"
+            f"The graph is located at {graph_url}.\n"
+            f"The session data file is located {data_url}."
+        ),
+        local_graph
+    )
 
 
 def _gid() -> str:
@@ -152,7 +199,6 @@ class BrewLog:
         if not self._id:
             self._id = next_session_id(self.user_id)
 
-
         self.index = f'{self.user_id}-{self._id}'
         self.cache_key = f'sessions/{self.user_id}/{self._id}.json'
 
@@ -180,16 +226,15 @@ class BrewLog:
         if self.index not in active_sessions:
             active_sessions.append(self.index)
 
-        num_of_events = len(self.data.get('SessionLogs', []))
-
-        if num_of_events:
+        if len(self.data.get('SessionLogs', [])):
             seconds_remaining = self.data['SessionLogs']\
-                [num_of_events - 1].get('SecondsRemaining', 0)
+                [:-1].get('SecondsRemaining', 0)
             if not seconds_remaining:
                 active_sessions.remove(self.index)
                 if self.index not in finished_sessions:
                     finished_sessions.append(self.index)
                 pico.change_batch_state(self.creds, self._id, 'fermenting')
+
 
         prosaic.s3_put(json.dumps(active_sessions), active_key)
         prosaic.s3_put(json.dumps(finished_sessions), finished_key)

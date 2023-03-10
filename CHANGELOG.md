@@ -1,7 +1,7 @@
 # Changelog for the Brewfather to Pico
 
-## [1.0.16] - 2023-03-04
-- fux
+## [1.1.0] - 2023-03-10
+- Updated to send email when batch is complete
 
 ## [1.0.0] - 2023-03-02
 - Updated to make use of objects

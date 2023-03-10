@@ -15,12 +15,15 @@ from bf2pico import (
     BUCKET,
     LOG,
     PARAMETER_PREFIX,
-    WEBSITE,
     brewfather,
     brewplot,
     pico,
     prosaic,
+    session,
 )
+
+
+
 
 
 def settle_active() -> None:  # pylint: disable=too-many-locals
@@ -40,8 +43,8 @@ def settle_active() -> None:  # pylint: disable=too-many-locals
 
         LOG.info('Finished sessions is %s', json.dumps(finished_sessions))
 
-        for session in active_sessions:
-            session_key = f"sessions/{session.replace('-', '/')}.json"
+        for _session in active_sessions:
+            session_key = f"sessions/{_session.replace('-', '/')}.json"
             data = json.loads(prosaic.s3_get(session_key, '{}'))
 
             num_of_event = len(data['SessionLogs'])
@@ -49,9 +52,9 @@ def settle_active() -> None:  # pylint: disable=too-many-locals
                 last_record = data['SessionLogs'][num_of_event - 1]
                 sec_left = last_record.get('SecondsRemaining', None)
                 if not sec_left:
-                    LOG.info('moving %s from active to finished', session)
-                    active_sessions.remove(session)
-                    finished_sessions.append(session)
+                    LOG.info('moving %s from active to finished', _session)
+                    active_sessions.remove(_session)
+                    finished_sessions.append(_session)
 
                     if data['Name'] != 'RINSE':
                         LOG.debug('Changing Batch %s to fermenting', data['Pico_Id'])
@@ -65,10 +68,11 @@ def settle_active() -> None:  # pylint: disable=too-many-locals
         for session_id in finished_sessions:
             pico_id = session_id.split('-')[1]
             session_key = f'sessions/{user_id}/{pico_id}.json'
-            session = json.loads(prosaic.s3_get(session_key, '{}'))
+            _session = json.loads(prosaic.s3_get(session_key, '{}'))
+
 
             local_graph =  f'data/{session_id}.png'
-            brewplot.create_graph(session, local_graph)
+            brewplot.create_graph(_session, local_graph)
             LOG.info('Graph Created %s', local_graph)
             year_month_day = time.strftime('%Y-%m-%d', time.localtime(int(time.time())))
             graph_key = f'graphs/{user_id}/{year_month_day}/{session_id}.png'
@@ -78,27 +82,12 @@ def settle_active() -> None:  # pylint: disable=too-many-locals
                 graph_key
             )
             LOG.debug(json.dumps(response, default=str))
-            # session['session'] = session
-            LOG.info(
-                f"""
-                    name = '{session['Name']}'
-                    user_id = '{user_id}'
-                    device_id = '{session['device_id']}'
-                    comment = 'boobs'
-                """
-            )
-            brewfather.update_brewlog(
-                session['Name'],
-                user_id,
-                session['device_id'],
-                f'Brew Complete Graph is {WEBSITE}{graph_key} '\
-                    f'the data file is {WEBSITE}/{session_key}'
-            )
-            # finished_sessions.pop(session_id)
+            session.close_brewing(user_id, session_id, _session)
 
             sys.exit(1)
 
         prosaic.s3_put(json.dumps(finished_sessions), finished_key)
+
 
 def _options() -> object:
     """

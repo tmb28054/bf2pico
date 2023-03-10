@@ -34,6 +34,8 @@ CACHE_TIME = int(os.getenv('BF2PICO_CACHE', '60')) # 1 min
 # how long to cache non-presistent data; not a temp cache such as api protection
 EPHEMERAL_CACHE_TIME = 60 * 60 * 48 # 2 days
 
+FROM_EMAIL = 'topaz@topazhome.net'
+
 MAIL_SERVER = 'mailrelay.botthouse.net:30001'
 
 PARAMETER_PREFIX = '/brewfather'

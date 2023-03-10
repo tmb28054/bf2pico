@@ -33,9 +33,28 @@ def _options() -> object:
     parser.add_argument('resource',
         nargs=1,
         help='what to',
-        choices=['device', 'devices', 'user', 'users', 'cache'],
+        choices=['device', 'devices', 'user', 'users', 'cache', 'email', 'emails'],
     )
     return parser.parse_args()
+
+
+def add_email(crowd) -> None:
+    """_summary_
+
+    Args:
+        crowd (_type_): _description_
+    """
+    user = input('Enter Brewfather User: ')
+    email = input('Enter email: ')
+    confirm = input('Confirm that you want to proceed (type yes): ')
+    if confirm.lower()[0] == 'y':
+        crowd.put_email(
+            username=user,
+            email=email
+        )
+        list_email(crowd)
+    else:
+        LOG.info('User Skipped')
 
 
 def add_user(crowd) -> None:
@@ -52,7 +71,7 @@ def add_user(crowd) -> None:
             username=user,
             apikey=apikey
         )
-        list_user(crowd)
+        list_email(crowd)
     else:
         LOG.info('User Skipped')
 
@@ -87,6 +106,16 @@ def list_user(crowd) -> None:
     """
     LOG.debug(json.dumps(crowd.users, indent=2))
     LOG.info(display(crowd.users, ['User','ApiKey']))
+
+
+def list_email(crowd) -> None:
+    """_summary_
+
+    Args:
+        crowd (_type_): _description_
+    """
+    LOG.debug(json.dumps(crowd.emails, indent=2))
+    LOG.info(display(crowd.emails, ['User','emails']))
 
 
 def list_device(crowd) -> None:
