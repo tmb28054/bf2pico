@@ -1,5 +1,8 @@
 # Changelog for the Brewfather to Pico
 
+## [1.1.1] - 2023-03-11
+- type-o fix
+
 ## [1.1.0] - 2023-03-10
 - Updated to send email when batch is complete
 - Added cloudfomration template

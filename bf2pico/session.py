@@ -9,7 +9,7 @@ import string
 import time
 
 
-from bf2picseo import (
+from bf2pico import (
     BUCKET,
     CACHE,
     FROM_EMAIL,
