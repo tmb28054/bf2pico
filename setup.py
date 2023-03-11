@@ -73,7 +73,7 @@ setup_options = {
     'long_description': get_readme(),
     'long_description_content_type': 'text/markdown',
     'license': 'Apache License 2.0',
-    'url': 'https://github.com/tmb28054/cftcli',
+    'url': PROJECT['Url'],
     'name': PROJECT['PyPackageName'],
     'version': get_changelog(),
     'author': PROJECT['Owner'],

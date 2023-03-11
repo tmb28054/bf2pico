@@ -21,7 +21,7 @@
 stages:
   - test
   - build
-  # - deploy
+  - deploy
 
 validate:
   stage: test
@@ -33,7 +33,12 @@ build-wheel:
   script:
     - bash scripts/build.sh
 
-# Update Github:
-#   stage: deploy
-#   script:
-#     - bash scripts/push-github.sh
+Update Github:
+  stage: deploy
+  script:
+    - bash scripts/push-github.sh
+
+Update Pypi:
+  stage: deploy
+  script:
+    - bash scripts/push-pypi.sh

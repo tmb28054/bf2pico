@@ -2,6 +2,7 @@
 
 ## [1.1.0] - 2023-03-10
 - Updated to send email when batch is complete
+- Added cloudfomration template
 
 ## [1.0.0] - 2023-03-02
 - Updated to make use of objects

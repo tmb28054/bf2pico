@@ -1,0 +1,183 @@
+---
+# it is better to be readable then limied to 80 chars
+# yamllint disable rule:line-length
+AWSTemplateFormatVersion: 2010-09-09
+Description: bf2pico stack
+Metadata:
+  cfn-lint:
+    config:
+      regions:
+        us-east-2
+
+Parameters:
+  BucketName:
+    Type: String
+    Description: What name to use for the bucket? Leave blank for random.
+    Default: ''
+  UserName:
+    Type: String
+    Description: What name to use for the user? Leave blank for random.
+    Default: ''
+
+Conditions:
+  NoBucketName: !Equals [!Ref BucketName, '']
+  NoUserName: !Equals [!Ref UserName, '']
+
+Resources:
+  OriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Ref AWS::StackName
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  Bucket:
+    Type: AWS::S3::Bucket
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35  # S3 Bucket should have access logging configured
+            reason: Dont want to pay for it
+          - id: W41  # S3 Bucket should have encryption option set
+            reason: Why encrypt public data
+          - id: W31  # S3 Bucket likely should not have a public read acl
+            reason: Its a webside
+    Properties:
+      BucketName: !If
+        - NoBucketName
+        - !Ref AWS::NoValue
+        - !Ref BucketName
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: F16  # S3 Bucket policy should not allow * principal
+            reason: The point is a public bucket
+    Properties:
+      Bucket: !Ref Bucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: '*'
+            Action: s3:GetObject
+            Resource:
+              - !Sub ${Bucket.Arn}/session*
+              - !Sub ${Bucket.Arn}/graphs*
+              - !Sub ${Bucket.Arn}/*
+          - Sid: picobrewBroker
+            Effect: Allow
+            Principal:
+              AWS: !GetAtt User.Arn
+            Action:
+              - s3:*Object*
+              - s3:*Multipart*
+              - s3:GetBucketLocation
+              - s3:Get*
+              - s3:List*
+            Resource:
+              - !Sub ${Bucket.Arn}/*
+              - !Sub ${Bucket.Arn}
+
+  User:
+    Type: AWS::IAM::User
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: F10  # IAM user should not have any inline policies.  Should be centralized Policy object on group
+            reason: I want to be lazy
+          - id: F2000  # User is not assigned to a group
+            reason: There is no need to put the user in a group.
+    Properties:
+      UserName: !If
+        - NoUserName
+        - !Ref AWS::NoValue
+        - !Ref UserName
+      Path: /bf2pico/
+      Policies:
+        - PolicyName: ParameterStoreAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Sid: ParameterStoreAccess
+                Effect: Allow
+                Action: ssm:*
+                Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/brewfather*"
+
+  CloudFrontDistribution:
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W10  # CloudFront Distribution should enable access logging
+            reason: Dont want to pay for it
+          - id: W70  # Cloudfront should use minimum protocol version TLS 1.2
+            reason: Not providing my own cert because why
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        IPV6Enabled: true
+        Origins:
+          # !Sub ${Bucket}.s3-website-${AWS::Region}.amazonaws.com
+          - DomainName: !Sub ${Bucket}.s3.${AWS::Region}.amazonaws.com
+            Id: static-hosting
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+            OriginAccessControlId: !GetAtt OriginAccessControl.Id
+        Enabled: "true"
+        DefaultRootObject: index.html
+        CustomErrorResponses:
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+        HttpVersion: http2
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - GET
+            - HEAD
+          Compress: true
+          TargetOriginId: static-hosting
+          ForwardedValues:
+            QueryString: "false"
+            Cookies:
+              Forward: none
+          ViewerProtocolPolicy: redirect-to-https
+
+  WebSiteParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /brewfather/website
+      Type: String
+      Value: !GetAtt CloudFrontDistribution.DomainName
+
+  BucketParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /brewfather/bucket
+      Type: String
+      Value: !Ref Bucket
+
+Outputs:
+  UserName:
+    Value: !Ref User
+  UserArn:
+    Value: !GetAtt User.Arn
+  BucketName:
+    Value: !Ref Bucket
+  BucketArn:
+    Value: !GetAtt Bucket.Arn
+  BucketUrl:
+    Value: !GetAtt Bucket.WebsiteURL
+  Website:
+    Value: !GetAtt CloudFrontDistribution.DomainName

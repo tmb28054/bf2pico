@@ -42,10 +42,11 @@ The screenshot below shows a Whirlpool for 27 minutes.
 
 ![chill screenshot](docs/images/whirlpool.png)
 
-
 ## Environment Variables
 
 - BF2PICO_CACHE: Default 1 minute, set the default cache time
 - BF2PICO_CACHE_LOCATION: Default `~/.bf2pico` the location for the cache
 - BREWFATHER_USERID: The default user_id to use
 - BREWFATHER_APIKEY: The default api_key to use
+
+## How to install
