@@ -127,6 +127,7 @@ def new_session_data(creds: object, session_data: dict) -> dict:
     data = {
         'GUID': _gid(),
         'CreationDate': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3],
+        'Epoch': int(time.time()),
         'Pico_Id': pico_id,
     }
     # populate from request

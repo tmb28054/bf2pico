@@ -69,7 +69,7 @@ def create_graph(data: dict, filename: str):
     drain_temp = []
     target_temp = []
 
-    for record in data['SessionLogs']:
+    for record in data.get('SessionLogs', []):
         x_axis.append(count)
         wort_temp.append(celsius_to_fahrenheit(record['WortTemp']))
         heat_temp.append(celsius_to_fahrenheit(record['ThermoBlockTemp']))

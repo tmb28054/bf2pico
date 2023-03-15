@@ -1,5 +1,8 @@
 # Changelog for the Brewfather to Pico
 
+## [1.2.0] - 2023-03-15
+- event management with email
+
 ## [1.1.1] - 2023-03-11
 - type-o fix
 

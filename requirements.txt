@@ -4,3 +4,4 @@ flask
 gunicorn
 matplotlib
 requests
+tabulate

@@ -38,6 +38,8 @@ FROM_EMAIL = 'topaz@topazhome.net'
 
 MAIL_SERVER = 'mailrelay.botthouse.net:30001'
 
+MAX_SESSION_TIME = 60 * 60 * 24  # 1 day
+
 PARAMETER_PREFIX = '/brewfather'
 
 # How long to cache presistent data

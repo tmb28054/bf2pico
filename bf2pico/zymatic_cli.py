@@ -28,21 +28,35 @@ def _options() -> object:
     parser.add_argument('action',
         nargs=1,
         help='What to do',
-        choices=['add', 'update', 'delete', 'list'],
+        choices=['add', 'update', 'delete', 'list', 'get'],
     )
     parser.add_argument('resource',
         nargs=1,
         help='what to',
         choices=['device', 'devices', 'user', 'users', 'cache', 'email', 'emails'],
     )
+    parser.add_argument('--keys',
+        required=False,
+        dest='only_keys',
+        action='store_true',
+        default=False,
+        help='for list cache only list the keys'
+    )
+    parser.add_argument('--cache-item',
+        dest='cache_item',
+        help='the item to get',
+        default='',
+        required=False
+    )
     return parser.parse_args()
 
 
-def add_email(crowd) -> None:
-    """_summary_
+def add_email(crowd, _) -> None:
+    """ I add a email
 
     Args:
-        crowd (_type_): _description_
+        crowd (object): A object of the configured data
+        _ (object): argparse object
     """
     user = input('Enter Brewfather User: ')
     email = input('Enter email: ')
@@ -57,11 +71,12 @@ def add_email(crowd) -> None:
         LOG.info('User Skipped')
 
 
-def add_user(crowd) -> None:
-    """_summary_
+def add_user(crowd, _) -> None:
+    """ add user
 
     Args:
-        crowd (_type_): _description_
+        crowd (object): A object of the configured data
+        _ (object): argparse object
     """
     user = input('Enter Brewfather User: ')
     apikey = input('Enter Brewfather ApiKey: ')
@@ -76,11 +91,12 @@ def add_user(crowd) -> None:
         LOG.info('User Skipped')
 
 
-def add_device(crowd) -> None:
-    """_summary_
+def add_device(crowd, _) -> None:
+    """ add device
 
     Args:
-        crowd (_type_): _description_
+        crowd (object): A object of the configured data
+        _ (object): argparse object
     """
     device = input('Enter pico DeviceId: ')
     user = input('Enter Brewfather User: ')
@@ -98,41 +114,45 @@ def add_device(crowd) -> None:
         LOG.info('Device skipped')
 
 
-def list_user(crowd) -> None:
-    """_summary_
+def list_user(crowd,_ ) -> None:
+    """ list users
 
     Args:
-        crowd (_type_): _description_
+        crowd (object): A object of the configured data
+        _ (object): argparse object
     """
     LOG.debug(json.dumps(crowd.users, indent=2))
     LOG.info(display(crowd.users, ['User','ApiKey']))
 
 
 def list_email(crowd) -> None:
-    """_summary_
+    """ list email
 
     Args:
-        crowd (_type_): _description_
+        crowd (object): A object of the configured data
+        _ (object): argparse object
     """
     LOG.debug(json.dumps(crowd.emails, indent=2))
     LOG.info(display(crowd.emails, ['User','emails']))
 
 
 def list_device(crowd) -> None:
-    """_summary_
+    """ list devices
 
     Args:
-        crowd (_type_): _description_
+        crowd (object): A object of the configured data
+        _ (object): argparse object
     """
     LOG.debug(json.dumps(crowd.devices, indent=2))
     LOG.info(display(crowd.devices, ['Device','User']))
 
 
 def delete_user(crowd) -> None:
-    """_summary_
+    """ delete a user
 
     Args:
-        crowd (_type_): _description_
+        crowd (object): A object of the configured data
+        _ (object): argparse object
     """
     user = input('Enter Brewfather User to delete: ')
     if user in crowd.users:
@@ -145,10 +165,11 @@ def delete_user(crowd) -> None:
 
 
 def delete_device(crowd) -> None:
-    """_summary_
+    """ delete a device
 
     Args:
-        crowd (_type_): _description_
+        crowd (object): A object of the configured data
+        _ (object): argparse object
     """
     device = input('Enter Brewfather device to delete: ')
     if device in crowd.devices:
@@ -157,23 +178,56 @@ def delete_device(crowd) -> None:
         LOG.info('%s not found', device)
 
 
-def list_cache(_) -> None:
+def get_cache(_, args) -> None:
     """ I display the cache as a dict
 
     Args:
-        crowd (_type_): brewfather auth object
+        _ (object): A object of the configured data
+        args (object): argparse object
     """
-    result = {}
-    for key in list(CACHE):
-        result[key] = CACHE.get(key, None)
-    LOG.info(json.dumps(result, indent=2, default=str))
+    if not args.cache_item:
+        LOG.info('what key to get')
+        list_cache(_, args)
+    else:
+        result_data = CACHE.get(args.cache_item, '')
+        try:
+            result_json = json.loads(result_data)
+            result_data = json.dumps(result_json, indent=2)
+        except:  # pylint: disable=bare-except
+            pass
+        LOG.info(result_data)
 
 
-def display(data: dict, header: list) -> None:
+def list_cache(_, args) -> None:
+    """ I display the cache as a dict
+
+    Args:
+        _ (object): A object of the configured data
+        args (object): argparse object
+    """
+    if args.only_keys:
+        result = []
+        for key in CACHE:
+            result.append([key])
+        LOG.info(
+            tabulate(
+                result,
+                ['keys'],
+                tablefmt="grid"
+            )
+        )
+    else:
+        result = {}
+        for key in list(CACHE):
+            result[key] = CACHE.get(key, None)
+        LOG.info(json.dumps(result, indent=2, default=str))
+
+
+def display(data, header: list) -> None:
     """_summary_
 
     Args:
-        data (dict): data to disply
+        data (dict, list): data to disply
         header (list): column headers
     """
     result = []
@@ -205,7 +259,10 @@ def main():
     if action == 'update':
         action = 'add'
     action_resource = f'{action}_{resource}'
-    globals()[action_resource](crowd)
+    try:
+        globals()[action_resource](crowd, args)
+    except KeyError as _:
+        LOG.info('Unsupported Resource (%s) for %s', args.resource[0], args.action[0])
 
 
 if __name__ == '__main__':
