@@ -36,7 +36,7 @@ def settle_active() -> None:  # pylint: disable=too-many-locals
         active_key = f'active-sessions/{user_id}.json'
         finished_key = f'finished-sessions/{user_id}.json'
 
-        active_sessions = json.loads(prosaic.s3_get(active_key, '[]]'))
+        active_sessions = json.loads(prosaic.s3_get(active_key, '[]'))
         finished_sessions = json.loads(prosaic.s3_get(finished_key, '[]'))
 
         LOG.info('Active sessions is %s', json.dumps(active_sessions))

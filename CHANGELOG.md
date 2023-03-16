@@ -1,5 +1,8 @@
 # Changelog for the Brewfather to Pico
 
+## [1.2.2] - 2023-03-16
+- another type-o
+
 ## [1.2.1] - 2023-03-15
 - Fix pypi
 

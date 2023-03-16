@@ -227,9 +227,12 @@ class BrewLog:
         if self.index not in active_sessions:
             active_sessions.append(self.index)
 
-        if len(self.data.get('SessionLogs', [])):
-            seconds_remaining = self.data['SessionLogs']\
-                [:-1].get('SecondsRemaining', 0)
+        if 'SessionLogs' not in self.data:
+            self.data['SessionLogs'] = []
+
+        if len(self.data['SessionLogs']):
+            record = self.data['SessionLogs'][:-1]
+            seconds_remaining = int(record.get('SecondsRemaining', 0))
             if not seconds_remaining:
                 active_sessions.remove(self.index)
                 if self.index not in finished_sessions:
