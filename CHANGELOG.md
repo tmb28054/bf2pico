@@ -1,6 +1,9 @@
 # Changelog for the Brewfather to Pico
 
 ## [1.3.0] - 2023-03-18
+- fixed session list bug
+
+## [1.3.0] - 2023-03-18
 - added recipe functions to the zymatic cli
 
 ## [1.2.2] - 2023-03-16
