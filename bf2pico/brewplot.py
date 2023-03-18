@@ -4,6 +4,7 @@
 
 import argparse
 import json
+# import sys
 import time
 
 
@@ -88,12 +89,17 @@ def create_graph(data: dict, filename: str):
 
     plt.xticks(rotation = 25)
     plt.ylabel('Temperature(°F)')
-    name = data.get('Name', 'unknown')
-    start_epoch = data['SessionLogs'][0]['epoch']
-    start_time = time.strftime('%H:%M', time.localtime(start_epoch))
-    stop_epoch = data['SessionLogs'][len(data['SessionLogs']) -1]['epoch']
-    stop_time = time.strftime('%H:%M', time.localtime(stop_epoch))
-    brew_date = time.strftime('%Y-%m', time.localtime(start_epoch))
+    try:
+        name = data.get('Name', 'unknown')
+        start_epoch = data['SessionLogs'][0]['epoch']
+        start_time = time.strftime('%H:%M', time.localtime(start_epoch))
+        stop_epoch = data['SessionLogs'][len(data['SessionLogs']) -1]['epoch']
+        stop_time = time.strftime('%H:%M', time.localtime(stop_epoch))
+        brew_date = time.strftime('%Y-%m', time.localtime(start_epoch))
+    except:  # pylint: disable=bare-except
+        print('Brewplot failure')
+        print(json.dumps(data, indnet=2))
+        # sys.exit(1)
     plt.xlabel(f'{brew_date} {start_time} - {stop_time}')
     plt.title(
         name,

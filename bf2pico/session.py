@@ -232,6 +232,8 @@ class BrewLog:
 
         if len(self.data['SessionLogs']):
             record = self.data['SessionLogs'][:-1]
+            print('Record is')
+            print(json.dumps(record, indent=2))
             seconds_remaining = int(record.get('SecondsRemaining', 0))
             if not seconds_remaining:
                 active_sessions.remove(self.index)

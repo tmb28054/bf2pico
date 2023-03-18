@@ -1,7 +1,10 @@
 # Changelog for the Brewfather to Pico
 
+## [1.3.0] - 2023-03-18
+- added recipe functions to the zymatic cli
+
 ## [1.2.2] - 2023-03-16
-- another type-o
+- another type-ogi
 
 ## [1.2.1] - 2023-03-15
 - Fix pypi
