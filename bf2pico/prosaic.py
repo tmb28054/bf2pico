@@ -25,6 +25,7 @@ from bf2pico import (
     LOG,
     MAIL_SERVER,
     PERSISTENT_CACHE_TIME,
+    SSM
 )
 
 
@@ -34,7 +35,6 @@ logging.getLogger('s3transfer').setLevel(logging.CRITICAL)
 
 
 S3 = boto3.client('s3')
-SSM = boto3.client('ssm')
 
 
 def delete_parameter(name: str) -> None:
@@ -108,6 +108,25 @@ def get_parameters(path: str) -> dict:
         expire=PERSISTENT_CACHE_TIME
     )
     return result
+
+
+def get_parameter(name: str) -> str:
+    """ I fetch a parameter value
+
+    Args:
+        name (str): the parameter name to fetch
+
+    Returns:
+        str: the value of the parameter
+    """
+    LOG.debug('Getting Pramater: %s <-----------------------------------', name)
+    if CACHE.get(f'parameters-{name}', None):
+        return json.loads(CACHE.get(f'parameter-{name}'))
+    response = SSM.get_parameter(
+        Name=name,
+        WithDecryption=True
+    )
+    return response['Parameter']['Value']
 
 
 def s3_getobjects(path: str) -> list:

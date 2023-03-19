@@ -180,4 +180,4 @@ Outputs:
   BucketUrl:
     Value: !GetAtt Bucket.WebsiteURL
   Website:
-    Value: !GetAtt CloudFrontDistribution.DomainName
+    Value: !Sub https://${CloudFrontDistribution.DomainName}/

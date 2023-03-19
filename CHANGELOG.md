@@ -1,5 +1,8 @@
 # Changelog for the Brewfather to Pico
 
+## [1.4.0] - 2023-03-19
+- Moved all parameters to aws prarameter store
+
 ## [1.3.1] - 2023-03-18
 - fixed session list bug
 

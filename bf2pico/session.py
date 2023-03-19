@@ -79,22 +79,24 @@ def close_brewing(user_id: str, session_id: str, session_data: dict) -> None:
     recipe = pico.get_list_recipes_map(user_id)['by_pico_id'][str(pico_id)]
     graph_url = f'{WEBSITE}{graph_key}'
     data_url = f"{WEBSITE}sessions/{user_id}/{session_data['ID']}.json"
-    LOG.debug('Sending Email')
-    prosaic.email(
-        FROM_EMAIL,
-        emails[user_id],
-        f"'{session_data.get('Name', 'unknown')}' brew complete!",
-        (
-            f"'{session_data.get('Name', 'unknown')}' brew complete!\n"
-            "The brewfather brewing is https://web.brewfather.app/tabs/"
-            f"batches/batch/{recipe['batch_id']}\n"
-            "The brewfather recipe is https://web.brewfather.app/tabs/"
-            f"recipes/recipe/{recipe['recipe_id']}\n"
-            f"The graph is located at {graph_url}.\n"
-            f"The session data file is located {data_url}."
-        ),
-        local_graph
-    )
+    if f'emailed/{session_id}' not in prosaic.s3_getobjects('emailed/'):
+        LOG.debug('Sending Email')
+        prosaic.email(
+            FROM_EMAIL,
+            emails[user_id],
+            f"'{session_data.get('Name', 'unknown')}' brew complete!",
+            (
+                f"'{session_data.get('Name', 'unknown')}' brew complete!\n"
+                "The brewfather brewing is https://web.brewfather.app/tabs/"
+                f"batches/batch/{recipe['batch_id']}\n"
+                "The brewfather recipe is https://web.brewfather.app/tabs/"
+                f"recipes/recipe/{recipe['recipe_id']}\n"
+                f"The graph is located at {graph_url}.\n"
+                f"The session data file is located {data_url}."
+            ),
+            local_graph
+        )
+    prosaic.s3_put('', f'emailed/{session_id}')
 
 
 def _gid() -> str:
@@ -109,7 +111,6 @@ def _gid() -> str:
                 )
             )
         ).upper()
-
 
 
 def new_session_data(creds: object, session_data: dict) -> dict:
@@ -238,7 +239,6 @@ class BrewLog:
                 if self.index not in finished_sessions:
                     finished_sessions.append(self.index)
                 pico.change_batch_state(self.creds, self._id, 'fermenting')
-
 
         prosaic.s3_put(json.dumps(active_sessions), active_key)
         prosaic.s3_put(json.dumps(finished_sessions), finished_key)
