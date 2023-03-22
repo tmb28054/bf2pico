@@ -15,8 +15,11 @@ from tabulate import tabulate
 from bf2pico import (
     CACHE,
     LOG,
+    PARAMETER_PREFIX,
     brewfather,
     pico,
+    get_parameter,
+    prosaic,
 )
 
 
@@ -37,7 +40,8 @@ def _options() -> object:
         help='what to',
         choices=[
             'device', 'devices', 'user', 'users', 'cache', 'email', 'emails',
-            'recipes', 'recipe'
+            'recipes', 'recipe', 'mailserver', 'mailport', 'mailfrom',
+            'emaillogin', 'emailpassword'
         ],
     )
     parser.add_argument('--keys',
@@ -92,6 +96,22 @@ def add_email(crowd, _) -> None:
         list_email(crowd, _)
     else:
         LOG.info('User Skipped')
+
+
+def add_parameter(crowd, args) -> None:
+    """ I add a email
+
+    Args:
+        crowd (object): A object of the configured data
+        args (object): argparse object
+    """
+    parameter = input(f'Enter {args.resource[0]}: ')
+    confirm = input('Confirm that you want to proceed (type yes): ')
+    if confirm.lower()[0] == 'y':
+        prosaic.put_parameter(f'{PARAMETER_PREFIX}/{args.resource[0]}', parameter)
+        list_parameter(crowd, args)
+    else:
+        LOG.info('Skipped')
 
 
 def add_user(crowd, _) -> None:
@@ -157,6 +177,18 @@ def list_email(crowd, _) -> None:
     """
     LOG.debug(json.dumps(crowd.emails, indent=2))
     LOG.info(display(crowd.emails, ['User','emails']))
+
+
+def list_parameter(_, args) -> None:
+    """ list parameter
+
+    Args:
+        _ (object): A object of the configured data
+        args (object): argparse object
+    """
+    value = get_parameter(f'{PARAMETER_PREFIX}/{args.resource[0]}')
+    LOG.debug('%s = "%s"', args.resource[0], value)
+    LOG.info(display({args.resource[0]: value}, ['Key','Value']))
 
 
 def list_device(crowd, _) -> None:
@@ -317,6 +349,10 @@ def main():
     if action == 'update':
         action = 'add'
     action_resource = f'{action}_{resource}'
+    if 'mail' in resource:
+        if action == 'get':
+            action = 'list'
+        action_resource = f'{action}_parameter'
     try:
         globals()[action_resource](crowd, args)
     except KeyError as _:

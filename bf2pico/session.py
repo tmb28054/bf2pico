@@ -12,7 +12,6 @@ import time
 from bf2pico import (
     BUCKET,
     CACHE,
-    FROM_EMAIL,
     LOG,
     PARAMETER_PREFIX,
     WEBSITE,
@@ -82,7 +81,6 @@ def close_brewing(user_id: str, session_id: str, session_data: dict) -> None:
     if f'emailed/{session_id}' not in prosaic.s3_getobjects('emailed/'):
         LOG.debug('Sending Email')
         prosaic.email(
-            FROM_EMAIL,
             emails[user_id],
             f"'{session_data.get('Name', 'unknown')}' brew complete!",
             (

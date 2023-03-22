@@ -1,5 +1,8 @@
 # Changelog for the Brewfather to Pico
 
+## [1.5.0] - 2023-03-22
+- moved to email with parameters in paramters store
+
 ## [1.4.0] - 2023-03-19
 - Moved all parameters to aws prarameter store
 

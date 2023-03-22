@@ -16,12 +16,44 @@ from bf2pico import (
     LOG,
     MAX_SESSION_TIME,
     PARAMETER_PREFIX,
+    SESSION_MAX_IDLE,
     brewfather,
     brewplot,
     pico,
     prosaic,
     session,
 )
+
+
+def is_finished(_session: str, data: dict) -> bool:
+    """ figure out if a session is still active
+
+    Args:
+        _session (str): the session id
+        data (dict): the session data
+
+    Returns:
+        bool: True if finished False if not
+    """
+    epoch = int(time.time())
+    if (int(time.time()) - int(data.get('Epoch', 0))) > MAX_SESSION_TIME:
+        return True
+
+    num_of_event = len(data.get('SessionLogs', []))
+    if not num_of_event:
+        return False
+
+    last_record = data['SessionLogs'][num_of_event - 1]
+    sec_left = int(last_record.get('SecondsRemaining', 0))
+    if not sec_left:
+        return True
+
+    last_epoch = int(last_record.get('epoch', 0))
+    is_stale = (epoch - last_epoch) > SESSION_MAX_IDLE
+    if is_stale or not sec_left:
+        return True
+
+    return False
 
 
 def settle_active() -> None:  # pylint: disable=too-many-locals
@@ -43,23 +75,11 @@ def settle_active() -> None:  # pylint: disable=too-many-locals
         LOG.info('Finished sessions is %s', json.dumps(finished_sessions))
 
         for _session in active_sessions:
-            finished = False
             LOG.info('Session is (%s)', _session)
             session_key = f"sessions/{_session.replace('-', '/')}.json"
             data = json.loads(prosaic.s3_get(session_key, '{}'))
 
-
-            if (int(time.time()) - int(data.get('Epoch', 0))) > MAX_SESSION_TIME:
-                finished = True
-            else:
-                num_of_event = len(data.get('SessionLogs', []))
-                if num_of_event:
-                    last_record = data['SessionLogs'][num_of_event - 1]
-                    sec_left = last_record.get('SecondsRemaining', None)
-                    if not sec_left:
-                        finished = True
-
-            if finished:
+            if is_finished(_session, data):
                 LOG.info('moving %s from active to finished', _session)
                 active_sessions.remove(_session)
                 finished_sessions.append(_session)

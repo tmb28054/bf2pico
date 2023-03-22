@@ -16,8 +16,12 @@ import diskcache
 
 
 LOG = logging.getLogger(__name__)
+
+LOG_LEVEL = logging.INFO
+if os.getenv('DEBUG', None):
+    LOG_LEVEL = logging.DEBUG
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=LOG_LEVEL,
     format="%(message)s",
     stream=sys.stdout
 )
@@ -35,6 +39,9 @@ SSM = boto3.client('ssm')
 
 PARAMETER_PREFIX = '/brewfather'
 
+# How long to cache presistent data
+PERSISTENT_CACHE_TIME = 60 * 60 * 24 * 365 * 10 # 10 years
+
 
 def get_parameter(name: str) -> str:
     """ I fetch a parameter value
@@ -45,14 +52,17 @@ def get_parameter(name: str) -> str:
     Returns:
         str: the value of the parameter
     """
+    cache_key = f'parameter-{name}'
     LOG.debug('Getting Pramater: %s <-----------------------------------', name)
-    if CACHE.get(f'parameters-{name}', None):
-        return json.loads(CACHE.get(f'parameter-{name}'))
+    if CACHE.get(cache_key, None):
+        return CACHE.get(cache_key)
     response = SSM.get_parameter(
         Name=name,
         WithDecryption=True
     )
-    return response['Parameter']['Value']
+    result = response['Parameter']['Value']
+    CACHE.set(cache_key, result, expire=PERSISTENT_CACHE_TIME)
+    return result
 
 
 BUCKET = os.getenv('BUCKET', get_parameter(f'{PARAMETER_PREFIX}/bucket'))
@@ -63,14 +73,9 @@ CACHE_TIME = int(os.getenv('BF2PICO_CACHE', '60')) # 1 min
 # how long to cache non-presistent data; not a temp cache such as api protection
 EPHEMERAL_CACHE_TIME = 60 * 60 * 48 # 2 days
 
-FROM_EMAIL = 'topaz@topazhome.net'
-
-MAIL_SERVER = 'mailrelay.botthouse.net:30001'
-
 MAX_SESSION_TIME = 60 * 60 * 24  # 1 day
 
-# How long to cache presistent data
-PERSISTENT_CACHE_TIME = 60 * 60 * 24 * 365 * 10 # 10 years
+SESSION_MAX_IDLE = 60 * 60  # 1 hour
 
 # Length of time requests should wait for a response form brewfather
 REQUESTS_TIMEOUT = 2  # 2 seconds

@@ -111,7 +111,9 @@ Resources:
               - Sid: ParameterStoreAccess
                 Effect: Allow
                 Action: ssm:*
-                Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/brewfather*"
+                Resource:
+                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/brewfather/*
+
 
   CloudFrontDistribution:
     Metadata:
@@ -159,7 +161,7 @@ Resources:
     Properties:
       Name: /brewfather/website
       Type: String
-      Value: !GetAtt CloudFrontDistribution.DomainName
+      Value: !Sub https://${CloudFrontDistribution.DomainName}/
 
   BucketParameter:
     Type: AWS::SSM::Parameter
