@@ -15,7 +15,6 @@ from tabulate import tabulate
 from bf2pico import (
     CACHE,
     LOG,
-    PARAMETER_PREFIX,
     brewfather,
     pico,
     get_parameter,
@@ -108,7 +107,7 @@ def add_parameter(crowd, args) -> None:
     parameter = input(f'Enter {args.resource[0]}: ')
     confirm = input('Confirm that you want to proceed (type yes): ')
     if confirm.lower()[0] == 'y':
-        prosaic.put_parameter(f'{PARAMETER_PREFIX}/{args.resource[0]}', parameter)
+        prosaic.put_parameter(args.resource[0], parameter)
         list_parameter(crowd, args)
     else:
         LOG.info('Skipped')
@@ -186,7 +185,7 @@ def list_parameter(_, args) -> None:
         _ (object): A object of the configured data
         args (object): argparse object
     """
-    value = get_parameter(f'{PARAMETER_PREFIX}/{args.resource[0]}')
+    value = get_parameter(args.resource[0])
     LOG.debug('%s = "%s"', args.resource[0], value)
     LOG.info(display({args.resource[0]: value}, ['Key','Value']))
 

@@ -202,11 +202,11 @@ def email(
         mail_body (str, optional): The text mail body
         image_file (str, optional): The local file to send. Defaults to ''
     """
-    email_from = get_parameter('mailfrom', 'zymatic.brew@gmail.com')
-    email_user = get_parameter('emaillogin', 'AKIAWX5IWZ2QKGLZWBPW')
-    email_password = get_parameter('emailpassword', '')
-    email_server = get_parameter('mailserver', 'email-smtp.us-east-2.amazonaws.com')
-    email_port = int(get_parameter('mailport', '2587'))
+    email_from = get_parameter('mailfrom')
+    email_user = get_parameter('emaillogin')
+    email_password = get_parameter('emailpassword')
+    email_server = get_parameter('mailserver')
+    email_port = int(get_parameter('mailport'))
 
 
     msg = MIMEMultipart()

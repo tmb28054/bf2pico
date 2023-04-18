@@ -35,6 +35,13 @@ Resources:
 
   Bucket:
     Type: AWS::S3::Bucket
+    # checkov:skip=CKV_AWS_56:the bucket is a website
+    # checkov:skip=CKV_AWS_55:the bucket is a website
+    # checkov:skip=CKV_AWS_54:the bucket is a website
+    # checkov:skip=CKV_AWS_53:the bucket is a website
+    # checkov:skip=CKV_AWS_18:I do not want to pay for logs
+    # checkov:skip=CKV_AWS_20:the bucket is a website
+    # checkov:skip=CKV_AWS_21:I do not want to pay for versioning
     Metadata:
       cfn_nag:
         rules_to_suppress:
@@ -114,7 +121,6 @@ Resources:
                 Resource:
                   - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/brewfather/*
 
-
   CloudFrontDistribution:
     Metadata:
       cfn_nag:
@@ -123,6 +129,9 @@ Resources:
             reason: Dont want to pay for it
           - id: W70  # Cloudfront should use minimum protocol version TLS 1.2
             reason: Not providing my own cert because why
+    # checkov:skip=CKV_AWS_68:No need to enable waf for a static site
+    # checkov:skip=CKV_AWS_174:AWS is managing the ssl
+    # checkov:skip=CKV_AWS_86:I dont want to pay for logs
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:

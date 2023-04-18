@@ -57,7 +57,7 @@ def get_parameter(name: str) -> str:
     if CACHE.get(cache_key, None):
         return CACHE.get(cache_key)
     response = SSM.get_parameter(
-        Name=name,
+        Name=f'{PARAMETER_PREFIX}/{name}',
         WithDecryption=True
     )
     result = response['Parameter']['Value']
@@ -65,7 +65,7 @@ def get_parameter(name: str) -> str:
     return result
 
 
-BUCKET = os.getenv('BUCKET', get_parameter(f'{PARAMETER_PREFIX}/bucket'))
+BUCKET = os.getenv('BUCKET', get_parameter('bucket'))
 
 
 CACHE_TIME = int(os.getenv('BF2PICO_CACHE', '60')) # 1 min
@@ -80,7 +80,7 @@ SESSION_MAX_IDLE = 60 * 60  # 1 hour
 # Length of time requests should wait for a response form brewfather
 REQUESTS_TIMEOUT = 2  # 2 seconds
 
-WEBSITE = os.getenv('WEBSITE',  get_parameter(f'{PARAMETER_PREFIX}/website'))
+WEBSITE = os.getenv('WEBSITE',  get_parameter('website'))
 
 if not os.getenv('AWS_RETRY_MODE', ''):
     os.environ['AWS_RETRY_MODE'] = 'adaptive'

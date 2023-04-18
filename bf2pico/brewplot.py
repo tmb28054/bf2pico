@@ -76,6 +76,8 @@ def create_graph(data: dict, filename: str):
         heat_temp.append(celsius_to_fahrenheit(record['ThermoBlockTemp']))
         drain_temp.append(celsius_to_fahrenheit(record['DrainTemp']))
         target_temp.append(celsius_to_fahrenheit(record['TargetTemp']))
+        if count == 1:
+            plt.legend()
         count += 1
 
     plt.plot(x_axis, wort_temp, color = 'g', linestyle = 'solid',
@@ -98,15 +100,13 @@ def create_graph(data: dict, filename: str):
         brew_date = time.strftime('%Y-%m', time.localtime(start_epoch))
     except:  # pylint: disable=bare-except
         print('Brewplot failure')
-        print(json.dumps(data, indnet=2))
-        # sys.exit(1)
+        print(json.dumps(data, indent=2))
     plt.xlabel(f'{brew_date} {start_time} - {stop_time}')
     plt.title(
         name,
         fontsize = 20
     )
     plt.grid()
-    plt.legend()
     if filename:
         plt.savefig(filename)
     else:
