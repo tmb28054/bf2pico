@@ -43,11 +43,12 @@ PARAMETER_PREFIX = '/brewfather'
 PERSISTENT_CACHE_TIME = 60 * 60 * 24 * 365 * 10 # 10 years
 
 
-def get_parameter(name: str) -> str:
+def get_parameter(name: str, default: str='') -> str:
     """ I fetch a parameter value
 
     Args:
         name (str): the parameter name to fetch
+        default (str): default value with '' being applied if not provided.
 
     Returns:
         str: the value of the parameter
@@ -56,12 +57,15 @@ def get_parameter(name: str) -> str:
     LOG.debug('Getting Pramater: %s <-----------------------------------', name)
     if CACHE.get(cache_key, None):
         return CACHE.get(cache_key)
-    response = SSM.get_parameter(
-        Name=f'{PARAMETER_PREFIX}/{name}',
-        WithDecryption=True
-    )
-    result = response['Parameter']['Value']
-    CACHE.set(cache_key, result, expire=PERSISTENT_CACHE_TIME)
+    try:
+        response = SSM.get_parameter(
+            Name=f'{PARAMETER_PREFIX}/{name}',
+            WithDecryption=True
+        )
+        result = response['Parameter']['Value']
+        CACHE.set(cache_key, result, expire=PERSISTENT_CACHE_TIME)
+    except:  # pylint: disable=bare-except
+        return default
     return result
 
 

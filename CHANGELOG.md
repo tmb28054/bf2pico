@@ -1,5 +1,8 @@
 # Changelog for the Brewfather to Pico
 
+## [1.5.1] - 2023-11-21
+- updated paramter store lookup to support default value.
+
 ## [1.5.0] - 2023-03-22
 - moved to email with parameters in paramters store
 
