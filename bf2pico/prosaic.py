@@ -5,8 +5,6 @@
 
 import json
 import logging
-import smtplib
-import ssl
 
 
 from email.mime.image import MIMEImage
@@ -202,15 +200,9 @@ def email(
         mail_body (str, optional): The text mail body
         image_file (str, optional): The local file to send. Defaults to ''
     """
-    email_from = get_parameter('mailfrom')
-    email_user = get_parameter('emaillogin')
-    email_password = get_parameter('emailpassword')
-    email_server = get_parameter('mailserver')
-    email_port = int(get_parameter('mailport'))
-
-
+    client = boto3.client('ses', region_name='us-east-2')
     msg = MIMEMultipart()
-    msg['From'] = email_from
+    msg['From'] = get_parameter('mailfrom')
     msg['To'] = mail_to
     msg['Subject'] = mail_subject
     msg.preamble = mail_subject
@@ -224,12 +216,11 @@ def email(
         part1 = MIMEText(mail_body, 'plain')
         msg.attach(part1)
 
-    with smtplib.SMTP(host=email_server, port=email_port) as mail_handler:
-        mail_handler.set_debuglevel(True)
-        mail_handler.ehlo()
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS)
-        mail_handler.starttls(context=context)
-        mail_handler.esmtp_features['auth'] = 'LOGIN PLAIN'
-        mail_handler.login(email_user, email_password)
-        mail_handler.sendmail(msg['To'],  msg['From'], msg.as_string())
-        mail_handler.quit()
+    response = client.send_raw_email(
+        Source=msg['From'],
+        Destinations=[mail_to],
+        RawMessage={
+            'Data': msg.as_string()
+        }
+    )
+    LOG.info(json.dumps(response, default=str))

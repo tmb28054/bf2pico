@@ -248,7 +248,7 @@ def get_cache(_, args) -> None:
             result_json = json.loads(result_data)
             result_data = json.dumps(result_json, indent=2)
         except:  # pylint: disable=bare-except
-            pass
+            LOG.debug('unable to load cache dict')
         LOG.info(result_data)
 
 

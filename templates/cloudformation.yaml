@@ -115,6 +115,10 @@ Resources:
           PolicyDocument:
             Version: 2012-10-17
             Statement:
+              - Sid: SES
+                Effect: Allow
+                Action: ses:*
+                Resource: '*'
               - Sid: ParameterStoreAccess
                 Effect: Allow
                 Action: ssm:*

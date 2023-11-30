@@ -103,7 +103,7 @@ def _gid() -> str:
     return \
         str(
             ''.join(
-                random.choices(
+                random.choices(  # nosec
                     string.ascii_letters + string.digits,
                     k=32
                 )

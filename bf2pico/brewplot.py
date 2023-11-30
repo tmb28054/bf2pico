@@ -4,11 +4,16 @@
 
 import argparse
 import json
-# import sys
 import time
+import traceback
 
 
 import matplotlib.pyplot as plt
+
+
+from bf2pico import (
+    LOG,
+)
 
 
 def load_session(filename: str) -> dict:
@@ -91,17 +96,18 @@ def create_graph(data: dict, filename: str):
 
     plt.xticks(rotation = 25)
     plt.ylabel('Temperature(°F)')
+    name = data.get('Name', 'unknown')
     try:
-        name = data.get('Name', 'unknown')
         start_epoch = data['SessionLogs'][0]['epoch']
         start_time = time.strftime('%H:%M', time.localtime(start_epoch))
         stop_epoch = data['SessionLogs'][len(data['SessionLogs']) -1]['epoch']
         stop_time = time.strftime('%H:%M', time.localtime(stop_epoch))
         brew_date = time.strftime('%Y-%m', time.localtime(start_epoch))
-    except:  # pylint: disable=bare-except
+        plt.xlabel(f'{brew_date} {start_time} - {stop_time}')
+    except Exception:  # pylint: disable=broad-exception-caught
         print('Brewplot failure')
-        print(json.dumps(data, indent=2))
-    plt.xlabel(f'{brew_date} {start_time} - {stop_time}')
+        LOG.error(str(traceback.format_exc()))
+
     plt.title(
         name,
         fontsize = 20
